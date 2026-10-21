@@ -123,7 +123,9 @@ function updateTickScale() {
     const r = tick.getBoundingClientRect(), x = r.left + r.width / 2, distance = Math.abs(x - center) / radius;
     const centerLift = Math.exp(-Math.pow((x - center) / Math.max(75, box.width * .2), 2));
     const edgeFade = Math.max(.38, 1 - Math.pow(distance, 2) * .62);
-    tick.style.setProperty("--tick-scale", String((.48 + .82 * centerLift) * edgeFade));
+    const scale = (.48 + .82 * centerLift) * edgeFade;
+    tick.style.setProperty("--tick-scale", String(scale));
+    tick.style.setProperty("--record-dot-top", `${tick.clientHeight / 2 + 7.5 * scale + 5}px`);
   });
 }
 function renderMonthTrack(animate = false) {

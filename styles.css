@@ -371,15 +371,15 @@ body { width: 100%; height: 100%; min-height: 100vh; zoom: 1; }
 .archive-empty { color: #888; font: 11px var(--mono); }
 
 /* The pale ticks identify years; blue dots mark dated photo records. */
-.month-viewport { height: 38px; }
-.month-track { height: 38px; }
-.month-tick { height: 38px; }
+.month-viewport { height: 40px; }
+.month-track { height: 40px; }
+.month-tick { height: 40px; }
 .tick-mark { background: #666 !important; }
-.month-tick.year-tick .tick-mark { background: #888 !important; }
+.month-tick.year-tick:not([aria-pressed="true"]) .tick-mark { background: #7a7a7a !important; }
 .month-tick.has-entry .tick-mark { background: #666 !important; }
 .month-tick[aria-pressed="true"] .tick-mark { background: #ededed !important; }
-.month-tick:disabled .tick-mark, .month-tick:disabled.year-tick .tick-mark { background: #666 !important; }
-.record-dot { top: 31px; width: 5px; height: 5px; background: #0a84ff; }
+.month-tick:disabled .tick-mark { background: #666 !important; }
+.record-dot { top: var(--record-dot-top, calc(50% + 11px)); width: 5px; height: 5px; background: #0a84ff; }
 .photo-pending { opacity: 0 !important; }
 .photo-ready { opacity: 1; transition: opacity .28s ease, filter .2s ease; }
 
@@ -428,5 +428,5 @@ body { width: 100%; height: 100%; min-height: 100vh; zoom: 1; }
 }
 
 @media (max-width: 800px) {
-  .month-viewport, .month-track, .month-tick { height: 38px; }
+  .month-viewport, .month-track, .month-tick { height: 40px; }
 }
