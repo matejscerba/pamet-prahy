@@ -1,7 +1,7 @@
 const photoHistory = (slug, years, label) => years.map((year) => {
   const count = year.count;
   const photos = Array.from({ length: count }, (_, index) => ({
-    src: `./public/images/places/${slug}/${year.value}/${String(index + 1).padStart(2, "0")}.png`,
+    src: `./public/images/places/${slug}/${year.value}/${String(index + 1).padStart(2, "0")}.${year.extension || "png"}`,
     alt: `${label}, ${year.value} · fotografie ${index + 1}`,
   }));
   return { month: `${year.value}-01`, year: String(year.value), date: String(year.value), photos };
@@ -14,7 +14,7 @@ const places = [
   { id: "pankrac-metro", name: "Metro D · Pankrác", subtitle: "Pankrác · Praha 4", category: "Doprava", coordinates: [50.0511, 14.4396], description: "Fotografie vývoje stanice a okolí Pankráce v čase.", history: photoHistory("pankrac-metro-d", [{ value: 2025, count: 3 }, { value: 2027, count: 4 }, { value: 2031, count: 3 }], "Metro D · Pankrác") },
   { id: "smichov", name: "Smíchovské nádraží", subtitle: "Smíchov · Praha 5", category: "Doprava", coordinates: [50.0613, 14.4087], description: "Proměny Smíchovského nádraží podle fotografií z jednotlivých let.", history: photoHistory("smichovske-nadrazi", [{ value: 2024, count: 3 }, { value: 2027, count: 3 }, { value: 2030, count: 3 }], "Smíchovské nádraží") },
   { id: "vaclavske-namesti", name: "Václavské náměstí", subtitle: "Nové Město · Praha 1", category: "Veřejný prostor", coordinates: [50.0814, 14.4275], description: "Fotografický přehled proměn Václavského náměstí.", history: photoHistory("vaslavske-namesti", [{ value: 2024, count: 4 }, { value: 2027, count: 4 }, { value: 2029, count: 4 }], "Václavské náměstí") },
-  { id: "rail-bridge", name: "Železniční most", subtitle: "Výtoň · Praha 2", category: "Doprava", coordinates: [50.0677, 14.4141], description: "Fotografie železničního mostu a jeho okolí v různých letech.", history: photoHistory("zeleznicni-most", [{ value: 2029, count: 2 }, { value: 2030, count: 3 }, { value: 2032, count: 4 }], "Železniční most") },
+  { id: "rail-bridge", name: "Železniční most", subtitle: "Výtoň · Praha 2", category: "Doprava", coordinates: [50.0677, 14.4141], description: "Fotografie železničního mostu a jeho okolí v různých letech.", history: photoHistory("zeleznicni-most", [{ value: 2026, count: 9, extension: "jpg" }, { value: 2029, count: 2 }, { value: 2030, count: 3 }, { value: 2032, count: 4 }], "Železniční most") },
 ];
 
 const monthStart = new Date(Date.UTC(2020, 0, 1));
