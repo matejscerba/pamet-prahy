@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#222222" />
     <title>Paměť Prahy — místa v čase</title>
+    <link rel="preconnect" href="https://gs-pub.praha.eu" />
     <link rel="preconnect" href="https://tile.openstreetmap.org" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=2" />
+    <link rel="stylesheet" href="./styles.css?v=17" />
   </head>
   <body>
     <header class="topbar" aria-label="Hlavička webu">
@@ -19,6 +20,7 @@
     </header>
     <main class="app-shell">
       <section class="timeline" aria-label="Procházet časovou osu">
+        <button class="detail-back" id="detail-back" type="button" hidden>Zpět na mapu</button>
         <div class="timeline-controls">
           <button class="round-button" id="month-back" aria-label="Předchozí datum"></button>
           <div class="month-viewport" id="month-viewport"><div class="month-track" id="month-track" role="list"></div></div>
@@ -26,6 +28,7 @@
           <div class="active-month" id="active-month" aria-live="polite">2029</div>
           <span class="timeline-pointer" aria-hidden="true"></span>
         </div>
+        <h1 class="timeline-place-title" id="detail-title" hidden></h1>
       </section>
       <section class="explore-layout" id="explore-layout" aria-label="Prozkoumat místa na mapě">
         <aside class="places-panel"><div class="places-scroll" id="places-list"></div></aside>
@@ -36,6 +39,6 @@
     <div class="photo-lightbox" id="photo-lightbox" hidden role="dialog" aria-modal="true" aria-label="Fotografie přes celou obrazovku"><button class="photo-lightbox-close" id="photo-lightbox-close" type="button" aria-label="Zavřít fotografii"></button><button class="photo-lightbox-nav photo-lightbox-prev" id="photo-lightbox-prev" type="button" aria-label="Předchozí fotografie"></button><img id="photo-lightbox-image" alt="" /><button class="photo-lightbox-nav photo-lightbox-next" id="photo-lightbox-next" type="button" aria-label="Následující fotografie"></button></div>
     <div class="info-backdrop" id="info-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="info-title"><section class="info-panel"><button id="info-close" class="info-close" type="button" aria-label="Zavřít">×</button><h2 id="info-title"></h2><p>Informace připravujeme.</p></section></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./app.js"></script>
+    <script src="./app.js?v=17"></script>
   </body>
 </html>
