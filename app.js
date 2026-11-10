@@ -30,6 +30,7 @@ let lightboxPhotoIndex = 0;
 let photoLoadQueue = [];
 let activePhotoLoads = 0;
 const photoLoads = new Map();
+const photoUpdates = new WeakMap();
 
 function preloadPhoto(src) {
   src = new URL(src, document.baseURI).href;
@@ -64,6 +65,42 @@ function prepareImage(image) {
     }
   });
 }
+async function updatePhoto(container, src, alt, animate = false) {
+  const url = new URL(src, document.baseURI).href;
+  if (photoUpdates.get(container)?.url === url) return;
+  const update = { url };
+  photoUpdates.set(container, update);
+  const current = [...container.querySelectorAll("img")].at(-1);
+  if (current.src === url) {
+    current.alt = alt;
+    prepareImage(current);
+    return;
+  }
+
+  if (!await preloadPhoto(url) || photoUpdates.get(container) !== update || !container.isConnected) return;
+  const incoming = new Image();
+  incoming.src = url;
+  incoming.alt = alt;
+  incoming.dataset.preparedSrc = url;
+  try { await incoming.decode(); } catch { return; }
+  if (photoUpdates.get(container) !== update || !container.isConnected) return;
+
+  const outgoing = [...container.querySelectorAll("img")];
+  outgoing.at(-1).after(incoming);
+  if (!animate || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    outgoing.forEach((image) => image.remove());
+    return;
+  }
+  outgoing.forEach((image) => image.setAttribute("aria-hidden", "true"));
+  incoming.classList.add("photo-dissolve");
+  // Keep the previous photo underneath so the blend never fades through the background.
+  const fade = incoming.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 800, easing: "ease-in-out", fill: "backwards" });
+  fade.onfinish = () => {
+    outgoing.forEach((image) => image.remove());
+    incoming.classList.remove("photo-dissolve");
+  };
+}
+
 function prepareImages(root = document) {
   if (root.matches?.("img")) prepareImage(root);
   root.querySelectorAll?.("img").forEach(prepareImage);
@@ -122,25 +159,33 @@ function updateTickScale() {
   viewport.querySelectorAll(".month-tick").forEach((tick) => {
     const r = tick.getBoundingClientRect(), x = r.left + r.width / 2, distance = Math.abs(x - center) / radius;
     const centerLift = Math.exp(-Math.pow((x - center) / Math.max(75, box.width * .2), 2));
-    const edgeFade = Math.max(.38, 1 - Math.pow(distance, 2) * .62);
-    const scale = (.48 + .82 * centerLift) * edgeFade;
+    const edgeFade = Math.max(.82, 1 - distance ** 2 * .18);
+    const scale = (.78 + .26 * centerLift) * edgeFade;
     tick.style.setProperty("--tick-scale", String(scale));
     tick.style.setProperty("--record-dot-top", `${tick.clientHeight / 2 + 7.5 * scale + 5}px`);
   });
 }
 function renderMonthTrack(animate = false) {
   const track = $("#month-track");
+  const viewport = $("#month-viewport");
+  const previousScroll = viewport.scrollLeft;
   track.innerHTML = months.map((month) => {
     const record = recordsForMonth(month), year = month.endsWith("-01");
     const label = record && year ? month.slice(0, 4) : fullMonth(month);
     return `<button class="month-tick ${record ? "has-entry" : ""} ${year ? "year-tick" : ""}" data-month="${month}" aria-label="${label}" aria-pressed="${month === state.month}" ${record ? `title="${label}"` : `disabled aria-disabled="true" title="V tomto datu nejsou fotografie"`}><span class="tick-mark"></span>${record ? '<span class="record-dot"></span>' : ""}</button>`;
   }).join("");
   track.querySelectorAll("[data-month]:not(:disabled)").forEach((button) => button.addEventListener("click", () => setMonth(button.dataset.month)));
-  const viewport = $("#month-viewport"), activeTick = track.querySelector(`[data-month="${state.month}"]`);
-  // End gutters let even the first and last date scroll all the way to the center.
-  const endGutter = `${viewport.clientWidth / 2}px`;
-  track.style.paddingLeft = endGutter;
-  track.style.paddingRight = endGutter;
+  const activeTick = track.querySelector(`[data-month="${state.month}"]`);
+  // Continue the ruler beyond its dates so a centered endpoint still has ticks on both sides.
+  const tickWidth = track.firstElementChild.offsetWidth;
+  const tickGap = parseFloat(getComputedStyle(track).columnGap);
+  const extensionCount = Math.ceil(viewport.clientWidth / (2 * (tickWidth + tickGap)));
+  const extension = '<span class="month-tick timeline-extension" aria-hidden="true"><span class="tick-mark"></span></span>'.repeat(extensionCount);
+  track.insertAdjacentHTML("afterbegin", extension);
+  track.insertAdjacentHTML("beforeend", extension);
+  // Rebuilding the track briefly shortens it and can clamp the scroll position.
+  viewport.scrollLeft = previousScroll;
+  updateTickScale();
   const controls = $(".timeline-controls");
   controls.style.setProperty("--timeline-center-offset", `${timelineCenterOffset(viewport)}px`);
   $("#active-month").textContent = state.month.endsWith("-01") && recordsForMonth(state.month) ? state.month.slice(0, 4) : fullMonth(state.month);
@@ -157,8 +202,10 @@ function filteredPlaces() {
   return places.filter((place) => !query || normalizeText(`${place.name} ${place.subtitle} ${place.category}`).includes(query));
 }
 function normalizeText(value) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("cs"); }
-function renderPlaces() {
+function renderPlaces(animatePhotos = false) {
   const container = $("#places-list"), visible = filteredPlaces();
+  const previousPhotos = new Map(animatePhotos ? [...container.querySelectorAll("[data-place-card]")]
+    .map((card) => [card.dataset.placeCard, card.querySelector(".place-image-wrap")]) : []);
   container.innerHTML = visible.map((place) => {
     const event = eventsForMonth(place, state.month), displayEvent = event?.photos.length ? event : (latestEventForMonth(place, state.month) || place.history[0]);
     const photos = displayEvent.photos, isSelected = place.id === state.placeId;
@@ -171,6 +218,14 @@ function renderPlaces() {
         </div>
       </div></article>`;
   }).join("") || '<p class="empty-search">Žádné místo neodpovídá hledání.</p>';
+  for (const card of container.querySelectorAll("[data-place-card]")) {
+    const previous = previousPhotos.get(card.dataset.placeCard);
+    if (!previous) continue;
+    const next = card.querySelector(".place-image-wrap");
+    const photo = next.querySelector("img");
+    next.replaceWith(previous);
+    updatePhoto(previous, photo.src, photo.alt, true);
+  }
   prepareImages(container);
   container.querySelectorAll("[data-select-place]").forEach((el) => {
     el.addEventListener("click", () => selectPlace(el.dataset.selectPlace, { pan: true }));
@@ -178,29 +233,23 @@ function renderPlaces() {
   });
   container.querySelectorAll("[data-photo-index]").forEach((button) => button.addEventListener("click", (event) => {
     event.stopPropagation(); const card = button.closest(".place-card"), buttons = [...card.querySelectorAll("[data-photo-index]")], image = button.querySelector("img");
-    const hero = card.querySelector(".place-image-wrap img"); hero.src = image.src; hero.alt = image.alt; prepareImage(hero);
+    updatePhoto(card.querySelector(".place-image-wrap"), image.src, image.alt);
     buttons.forEach((item) => { const active = item === button; item.classList.toggle("is-active", active); item.setAttribute("aria-pressed", String(active)); });
     card.querySelector(".place-card-dot").style.left = `${13.5 + Number(button.dataset.photoIndex) * 31}px`;
   }));
   container.querySelectorAll("[data-open-place]").forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); openDetail(button.dataset.openPlace); }));
 }
 
-function updateMarkerStyles() {
+function updateMarkerStyles(animatePhotos = false) {
   for (const place of places) {
     const marker = state.markers.get(place.id); if (!marker) continue;
     const displayEvent = eventsForMonth(place, state.month) || latestEventForMonth(place, state.month) || place.history[0], image = displayEvent?.photos[0]?.src;
     marker.setOpacity(filteredPlaces().some((entry) => entry.id === place.id) ? 1 : 0);
     const src = image || "./public/images/places/vltavska/2033/01.png";
     if (!marker.getElement()?.querySelector(".map-pin")) marker.setIcon(L.divIcon({ className: "", html: `<button class="map-pin ${state.placeId === place.id ? "is-active" : ""}" aria-label="Otevřít ${place.name}" type="button"><img src="${src}" alt=""/><span class="pin-label">${place.name}</span></button>`, iconSize: [68, 68], iconAnchor: [34, 34] }));
-    const pin = marker.getElement()?.querySelector(".map-pin"), pinImage = pin?.querySelector("img");
+    const pin = marker.getElement()?.querySelector(".map-pin");
     pin?.classList.toggle("is-active", state.placeId === place.id);
-    if (pinImage && marker._pinPhoto !== src) {
-      marker._pinPhoto = src;
-      preloadPhoto(src).then((ready) => {
-        if (!ready || !pinImage.isConnected || marker._pinPhoto !== src) return;
-        pinImage.src = src; prepareImage(pinImage);
-      });
-    } else if (pinImage) prepareImage(pinImage);
+    if (pin) updatePhoto(pin, src, "", animatePhotos);
   }
 }
 function selectPlace(placeId, options = {}) {
@@ -211,7 +260,8 @@ function selectPlace(placeId, options = {}) {
 }
 function setMonth(month) {
   if (!months.includes(month) || !hasPhotosForMonth(month)) return;
-  state.month = month; renderMonthTrack(true); renderPlaces(); updateMarkerStyles();
+  state.month = month; renderMonthTrack(true); renderPlaces(true); updateMarkerStyles(true);
+  updateAerialMap();
   if (detailPlace()) renderArchiveEvent(detailPlace(), true);
 }
 function nudgeMonth(offset) {
@@ -219,9 +269,92 @@ function nudgeMonth(offset) {
   while (index >= 0 && index < months.length) { if (hasPhotosForMonth(months[index])) { setMonth(months[index]); return; } index += step; }
 }
 
+function setupCoverFlow(layer) {
+  const flow = layer.querySelector(".history-photos");
+  if (!flow) return;
+  const photos = [...flow.querySelectorAll(".history-photo")];
+  let centered = 0;
+  let frame = null;
+  let photoWidth, snapPositions, spacing;
+
+  function measure() {
+    photoWidth = photos[0].offsetWidth || 1;
+    const centerOffset = (photoWidth - flow.clientWidth) / 2;
+    snapPositions = photos.map((photo) => photo.offsetLeft + centerOffset);
+    spacing = snapPositions[1] - snapPositions[0] || photoWidth;
+    update();
+  }
+
+  function update() {
+    const scrollLeft = flow.scrollLeft;
+    let closest = Infinity;
+    photos.forEach((photo, index) => {
+      const offset = snapPositions[index] - scrollLeft;
+      const distance = offset / photoWidth;
+      if (Math.abs(distance) < closest) {
+        closest = Math.abs(distance);
+        centered = index;
+      }
+      const overlap = Math.max(0, Math.abs(offset) - spacing) * .2;
+      photo.style.setProperty("--cover-shift", `${-Math.sign(offset) * overlap}px`);
+      const tilt = Math.max(-1, Math.min(1, distance * 1.7));
+      photo.style.setProperty("--cover-tilt", `${tilt * -52}deg`);
+      photo.style.setProperty("--cover-scale", String(1 - Math.abs(tilt) * .23));
+      photo.style.zIndex = String(photos.length - Math.round(Math.min(photos.length, Math.abs(distance))));
+    });
+  }
+
+  function centerPhoto(photo) {
+    flow.scrollTo({
+      left: snapPositions[photos.indexOf(photo)],
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+    });
+  }
+
+  let lastWheelStep = -Infinity;
+  flow.addEventListener("wheel", (event) => {
+    if (event.ctrlKey || event.shiftKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+    event.preventDefault();
+    if (event.timeStamp - lastWheelStep < 220) return;
+    lastWheelStep = event.timeStamp;
+    const photo = photos[centered + Math.sign(event.deltaY)];
+    if (photo) centerPhoto(photo);
+  }, { passive: false });
+  flow.addEventListener("scroll", () => {
+    if (frame !== null) return;
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      update();
+    });
+  }, { passive: true });
+  const resizeObserver = new ResizeObserver(() => {
+    if (flow.isConnected) measure();
+    else resizeObserver.disconnect();
+  });
+  resizeObserver.observe(flow);
+  flow.addEventListener("click", (event) => {
+    const photo = event.target.closest(".history-photo");
+    if (!photo || photo === photos[centered]) return;
+    event.stopPropagation();
+    centerPhoto(photo);
+  });
+  flow.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const index = centered + (event.key === "ArrowLeft" ? -1 : 1);
+    const photo = photos[index];
+    if (photo) {
+      photo.focus({ preventScroll: true });
+      centerPhoto(photo);
+    }
+  });
+  measure();
+}
+
 function archiveEventMarkup(event) {
   if (!event) return '<p class="archive-empty">Pro toto datum nejsou fotografie.</p>';
-  return `<h2 class="history-date">${event.year}</h2><div class="history-photos" aria-label="Fotografie z roku ${event.year}">${event.photos.map((photo) => `<button class="history-photo" type="button" data-fullscreen-photo aria-label="Zobrazit fotografii přes celou obrazovku: ${photo.alt}"><img src="${photo.src}" alt="${photo.alt}"/></button>`).join("")}</div>`;
+  return `<div class="history-photos" tabindex="0" aria-label="Fotografie z roku ${event.year}">${event.photos.map((photo) => `<button class="history-photo" type="button" data-fullscreen-photo aria-label="Zobrazit fotografii přes celou obrazovku: ${photo.alt}"><img src="${photo.src}" alt="${photo.alt}"/></button>`).join("")}</div>`;
 }
 function archiveLayerMarkup(event, type = "current") {
   return `<div class="archive-content ${type}" aria-label="Fotografie roku ${event?.year || ""}">${archiveEventMarkup(event)}</div>`;
@@ -229,14 +362,13 @@ function archiveLayerMarkup(event, type = "current") {
 function historyMarkup(place) {
   const event = eventsForMonth(place, state.month);
   return `<section class="detail-page" aria-labelledby="detail-title">
-    <div class="detail-heading"><h1 id="detail-title">${place.name}</h1><button class="detail-back" type="button" id="detail-back">Zpět na mapu</button></div>
     <div class="archive-stage" id="archive-stage" aria-live="polite">${archiveLayerMarkup(event)}</div>
   </section>`;
 }
 async function renderArchiveEvent(place, animate = false) {
   const stage = $("#archive-stage"); if (!stage) return;
   const event = eventsForMonth(place, state.month);
-  if (!animate) { stage.innerHTML = archiveLayerMarkup(event); prepareImages(stage); return; }
+  if (!animate) { stage.innerHTML = archiveLayerMarkup(event); prepareImages(stage); setupCoverFlow(stage); return; }
   const token = (state.archiveRenderToken || 0) + 1; state.archiveRenderToken = token;
   await Promise.all(event?.photos.map((photo) => preloadPhoto(photo.src)) || []);
   if (token !== state.archiveRenderToken || !detailPlace() || !stage.isConnected) return;
@@ -246,7 +378,7 @@ async function renderArchiveEvent(place, animate = false) {
   const incoming = document.createElement("div");
   incoming.innerHTML = archiveLayerMarkup(event, "incoming");
   const nextLayer = incoming.firstElementChild;
-  stage.append(nextLayer); prepareImages(nextLayer);
+  stage.append(nextLayer); prepareImages(nextLayer); setupCoverFlow(nextLayer);
   nextLayer.getBoundingClientRect();
   requestAnimationFrame(() => {
     if (token !== state.archiveRenderToken) return;
@@ -281,9 +413,12 @@ function openDetail(placeId, { updateUrl = true } = {}) {
       if (openToken !== state.detailOpenToken || state.detailPlaceId !== placeId) return;
     $("#explore-layout").hidden = true;
     $("#place-detail").innerHTML = historyMarkup(place); $("#place-detail").hidden = false;
-    prepareImages($("#place-detail"));
+    prepareImages($("#place-detail")); setupCoverFlow($("#place-detail"));
     requestAnimationFrame(() => $("#place-detail").classList.add("is-visible"));
-    $("#detail-back").addEventListener("click", closeDetail);
+    $("#detail-title").textContent = place.name;
+    $("#detail-title").hidden = false;
+    $("#detail-back").hidden = false;
+    renderMonthTrack(false);
     }, 160);
   });
   renderMonthTrack(true); updateMarkerStyles(); if (updateUrl) syncHash();
@@ -293,7 +428,9 @@ function closeDetail({ updateUrl = true } = {}) {
   state.detailOpenToken = (state.detailOpenToken || 0) + 1;
   state.archiveRenderToken = (state.archiveRenderToken || 0) + 1;
   $("#place-detail").classList.remove("is-visible");
-  window.setTimeout(() => { $("#place-detail").hidden = true; $("#explore-layout").hidden = false; $("#explore-layout").classList.remove("is-leaving"); state.map?.invalidateSize(); }, 320);
+  $("#detail-title").hidden = true;
+  $("#detail-back").hidden = true;
+  window.setTimeout(() => { $("#place-detail").hidden = true; $("#explore-layout").hidden = false; $("#explore-layout").classList.remove("is-leaving"); state.map?.invalidateSize(); updateAerialMap(); }, 320);
   state.detailPlaceId = null; state.placeId = null; renderMonthTrack(false); renderPlaces(); updateMarkerStyles(); if (updateUrl) syncHash();
 }
 function returnToMap() {
@@ -325,10 +462,65 @@ function moveLightboxPhoto(direction) {
   renderLightboxPhoto();
 }
 function closePhoto() { const box = $("#photo-lightbox"); box.classList.remove("is-open"); window.setTimeout(() => { if (!box.classList.contains("is-open")) box.hidden = true; }, 220); }
+const aerialArchive = "https://gs-pub.praha.eu/arcgis/rest/services/ort/ortofotomapa_archiv/MapServer";
+// Prefer the regular survey. The leaf-off survey is the available 2026 capture.
+const aerialLayers = [[2026, 285], [2025, 281], [2024, 280], [2023, 264], [2022, 240], [2021, 224], [2020, 204]];
+let aerialLayer = null;
+let pendingAerialLayer = null;
+
+function updateAerialMap() {
+  if (!state.map || state.detailPlaceId) return;
+  const selectedYear = Number(state.month.slice(0, 4));
+  const [year, layerId] = aerialLayers.find(([captureYear]) => captureYear <= selectedYear);
+  if (pendingAerialLayer?.captureYear === year) return;
+  pendingAerialLayer?.remove();
+  pendingAerialLayer = null;
+  if (aerialLayer?.captureYear === year) return;
+
+  const next = L.tileLayer("", {
+    className: "aerial-tiles", opacity: 0, maxZoom: 19, noWrap: true,
+    attribution: '<a href="https://geoportalpraha.cz/data-a-sluzby/clanky-a-projekty/ortofoto">© IPR Praha</a>',
+  });
+  next.captureYear = year;
+  next.getTileUrl = ({ x, y, z }) => {
+    const crs = L.CRS.EPSG3857;
+    const scale = crs.scale(z);
+    const size = next.getTileSize();
+    const northwest = crs.transformation.untransform(L.point(x * size.x, y * size.y), scale);
+    const southeast = crs.transformation.untransform(L.point((x + 1) * size.x, (y + 1) * size.y), scale);
+    const bbox = [northwest.x, southeast.y, southeast.x, northwest.y].join(",");
+    return `${aerialArchive}/export?bbox=${bbox}&bboxSR=3857&imageSR=3857&size=${size.x},${size.y}&format=png32&transparent=true&layers=show:${layerId}&f=image`;
+  };
+
+  let loadedTiles = 0;
+  next.on("tileload", () => {
+    loadedTiles++;
+    if (!aerialLayer && pendingAerialLayer === next) next.setOpacity(1);
+  });
+  next.once("load", () => {
+    if (pendingAerialLayer !== next) return;
+    pendingAerialLayer = null;
+    if (!loadedTiles) { next.remove(); return; }
+
+    const previous = aerialLayer;
+    aerialLayer = next;
+    next.setOpacity(1);
+    if (!previous || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      previous?.remove();
+      return;
+    }
+    const fade = next.getContainer().animate([{ opacity: 0 }, { opacity: 1 }], { duration: 800, easing: "ease-in-out" });
+    fade.onfinish = () => previous?.remove();
+  });
+  pendingAerialLayer = next;
+  next.addTo(state.map);
+}
+
 async function setupMap() {
   state.map = L.map("map", { zoomControl: false, scrollWheelZoom: true, preferCanvas: true }).setView([50.0875, 14.4213], 12);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors' }).addTo(state.map);
   L.control.zoom({ position: "bottomright" }).addTo(state.map);
+  updateAerialMap();
   const initialPins = places.map((place) => (eventsForMonth(place, state.month) || latestEventForMonth(place, state.month) || place.history[0]).photos[0].src);
   await Promise.all([...new Set(initialPins)].map(preloadPhoto));
   for (const place of places) { const marker = L.marker(place.coordinates).addTo(state.map); marker.on("click", () => openDetail(place.id)); state.markers.set(place.id, marker); }
@@ -336,6 +528,7 @@ async function setupMap() {
 }
 
 $("#month-back").innerHTML = icon("left"); $("#month-forward").innerHTML = icon("right"); $("#map-home").innerHTML = icon("locate");
+$("#detail-back").addEventListener("click", closeDetail);
 $(".topbar-brand").addEventListener("click", (event) => { event.preventDefault(); returnToMap(); });
 $("#month-back").addEventListener("click", () => nudgeMonth(-1)); $("#month-forward").addEventListener("click", () => nudgeMonth(1));
 $("#map-home").addEventListener("click", () => { state.placeId = null; renderPlaces(); updateMarkerStyles(); state.map.flyTo([50.0875, 14.4213], 12, { duration: .65 }); });
