@@ -202,8 +202,30 @@ function filteredPlaces() {
   return places.filter((place) => !query || normalizeText(`${place.name} ${place.subtitle} ${place.category}`).includes(query));
 }
 function normalizeText(value) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("cs"); }
+function placesByMapDistance(visible) {
+  if (!state.map) return visible;
+  const center = state.map.getCenter();
+  return visible
+    .map((place) => ({ place, distance: center.distanceTo(place.coordinates) }))
+    .sort((a, b) => a.distance - b.distance)
+    .map(({ place }) => place);
+}
+
+function reorderPlacesForMap() {
+  if (state.detailPlaceId || $("#explore-layout").hidden) return;
+  const list = $("#places-list");
+  const cards = new Map([...list.children].map((card) => [card.dataset.placeCard, card]));
+  const ordered = placesByMapDistance(filteredPlaces());
+  const nearestChanged = ordered[0]?.id !== list.firstElementChild?.dataset.placeCard;
+  ordered.forEach((place, index) => {
+    const card = cards.get(place.id);
+    if (card && card !== list.children[index]) list.insertBefore(card, list.children[index]);
+  });
+  if (nearestChanged) list.scrollTo({ top: 0, left: 0, behavior: "instant" });
+}
+
 function renderPlaces(animatePhotos = false) {
-  const container = $("#places-list"), visible = filteredPlaces();
+  const container = $("#places-list"), visible = placesByMapDistance(filteredPlaces());
   const previousPhotos = new Map(animatePhotos ? [...container.querySelectorAll("[data-place-card]")]
     .map((card) => [card.dataset.placeCard, card.querySelector(".place-image-wrap")]) : []);
   container.innerHTML = visible.map((place) => {
@@ -514,13 +536,21 @@ function updateAerialMap() {
   });
   pendingAerialLayer = next;
   next.addTo(state.map);
+  return next;
 }
 
 async function setupMap() {
   state.map = L.map("map", { zoomControl: false, scrollWheelZoom: true, preferCanvas: true }).setView([50.0875, 14.4213], 12);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors' }).addTo(state.map);
+  state.map.on("moveend", reorderPlacesForMap);
+  const initialAerialLayer = updateAerialMap();
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, zIndex: 0, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors' }).addTo(state.map);
+  // Let the visible map load before warming the rest of the photo archive.
+  const photoWarmup = window.setTimeout(preloadAllPhotos, 3500);
+  initialAerialLayer.once("load", () => {
+    window.clearTimeout(photoWarmup);
+    preloadAllPhotos();
+  });
   L.control.zoom({ position: "bottomright" }).addTo(state.map);
-  updateAerialMap();
   const initialPins = places.map((place) => (eventsForMonth(place, state.month) || latestEventForMonth(place, state.month) || place.history[0]).photos[0].src);
   await Promise.all([...new Set(initialPins)].map(preloadPhoto));
   for (const place of places) { const marker = L.marker(place.coordinates).addTo(state.map); marker.on("click", () => openDetail(place.id)); state.markers.set(place.id, marker); }
@@ -551,6 +581,6 @@ document.querySelectorAll("[data-info]").forEach((button) => button.addEventList
 $("#info-close").addEventListener("click", () => { $("#info-dialog").classList.remove("is-open"); setTimeout(() => { $("#info-dialog").hidden = true; }, 180); });
 window.addEventListener("hashchange", () => { const id = location.hash.startsWith("#place/") ? location.hash.slice(7) : null; if (id && id !== state.detailPlaceId) openDetail(id, { updateUrl: false }); else if (!id && state.detailPlaceId) closeDetail({ updateUrl: false }); });
 
-renderMonthTrack(); renderPlaces(); setupMap(); preloadAllPhotos();
+setupMap(); renderMonthTrack(); renderPlaces();
 const initialPlace = location.hash.startsWith("#place/") ? location.hash.slice(7) : null;
 if (initialPlace) openDetail(initialPlace, { updateUrl: false });
