@@ -541,6 +541,7 @@ function updateAerialMap() {
 
 async function setupMap() {
   state.map = L.map("map", { zoomControl: false, scrollWheelZoom: true, preferCanvas: true }).setView([50.0875, 14.4213], 12);
+  state.map.attributionControl.setPosition("bottomleft").setPrefix(false);
   state.map.on("moveend", reorderPlacesForMap);
   const initialAerialLayer = updateAerialMap();
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, zIndex: 0, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors' }).addTo(state.map);
@@ -584,3 +585,34 @@ window.addEventListener("hashchange", () => { const id = location.hash.startsWit
 setupMap(); renderMonthTrack(); renderPlaces();
 const initialPlace = location.hash.startsWith("#place/") ? location.hash.slice(7) : null;
 if (initialPlace) openDetail(initialPlace, { updateUrl: false });
+
+const header = $(".topbar");
+const searchToggle = $(".mobile-search-toggle");
+const menuToggle = $(".mobile-menu-toggle");
+
+function setHeaderPanel(panel) {
+  header.dataset.panel = panel;
+  searchToggle.setAttribute("aria-expanded", String(panel === "search"));
+  menuToggle.setAttribute("aria-expanded", String(panel === "menu"));
+}
+
+searchToggle.addEventListener("click", () => {
+  const opening = header.dataset.panel !== "search";
+  setHeaderPanel(opening ? "search" : "");
+  if (opening) $("#place-search").focus();
+});
+menuToggle.addEventListener("click", () => {
+  setHeaderPanel(header.dataset.panel === "menu" ? "" : "menu");
+});
+$("#header-menu").addEventListener("click", (event) => {
+  if (event.target.closest("[data-info]")) setHeaderPanel("");
+});
+document.addEventListener("click", (event) => {
+  if (!header.contains(event.target)) setHeaderPanel("");
+});
+header.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !header.dataset.panel) return;
+  const toggle = header.dataset.panel === "search" ? searchToggle : menuToggle;
+  setHeaderPanel("");
+  toggle.focus();
+});
