@@ -1,46 +1,53 @@
 <!doctype html>
-<html lang="cs">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#222222" />
-    <title>Paměť Prahy — místa v čase</title>
-    <link rel="preconnect" href="https://gs-pub.praha.eu" />
-    <link rel="preconnect" href="https://tile.openstreetmap.org" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=26" />
-  </head>
-  <body>
-    <header class="topbar" aria-label="Hlavička webu">
-      <button class="mobile-header-toggle mobile-search-toggle" type="button" aria-label="Hledat místo" aria-controls="header-search" aria-expanded="false"><span aria-hidden="true"></span></button>
-      <div class="topbar-search" id="header-search"><label class="visually-hidden" for="place-search">Hledat místo</label><input id="place-search" type="search" placeholder="Hledat budovu nebo místo" autocomplete="off" /></div>
-      <a class="topbar-brand" href="#" aria-label="Paměť Prahy — zpět na mapu"><span class="brand-name">PAMĚŤ PRAHY</span></a>
-      <button class="mobile-header-toggle mobile-menu-toggle" type="button" aria-label="Nabídka" aria-controls="header-menu" aria-expanded="false"><span aria-hidden="true">⋯</span></button>
-      <nav class="topbar-nav" id="header-menu" aria-label="Hlavní navigace">
-        <button type="button" data-info="About">About</button><button type="button" data-info="Contact">Contact</button><button type="button" data-info="Image policy">Image policy</button><button type="button" data-info="Q&amp;A">Q&amp;A</button>
-      </nav>
-    </header>
-    <main class="app-shell">
-      <section class="timeline" aria-label="Procházet časovou osu">
-        <button class="detail-back" id="detail-back" type="button" hidden aria-label="Zpět na mapu"><span class="detail-back-label">Zpět na mapu</span><span class="detail-back-short" aria-hidden="true">Zpět</span></button>
-        <div class="timeline-controls">
-          <button class="round-button" id="month-back" aria-label="Předchozí datum"></button>
-          <div class="month-viewport" id="month-viewport"><div class="month-track" id="month-track" role="list"></div></div>
-          <button class="round-button" id="month-forward" aria-label="Následující datum"></button>
-          <div class="active-month" id="active-month" aria-live="polite">2029</div>
-          <span class="timeline-pointer" aria-hidden="true"></span>
-        </div>
-        <h1 class="timeline-place-title" id="detail-title" hidden></h1>
-      </section>
-      <section class="explore-layout" id="explore-layout" aria-label="Prozkoumat místa na mapě">
-        <aside class="places-panel"><div class="places-scroll" id="places-list"></div></aside>
-        <div class="map-panel"><div id="map" role="application" aria-label="Interaktivní mapa Prahy"><div class="map-fade" aria-hidden="true"></div></div><button class="map-locate" id="map-home" aria-label="Zobrazit všechna místa na mapě"></button></div>
-      </section>
-      <section class="place-detail" id="place-detail" hidden aria-live="polite"></section>
-    </main>
-    <div class="photo-lightbox" id="photo-lightbox" hidden role="dialog" aria-modal="true" aria-label="Fotografie přes celou obrazovku"><button class="photo-lightbox-close" id="photo-lightbox-close" type="button" aria-label="Zavřít fotografii"></button><button class="photo-lightbox-nav photo-lightbox-prev" id="photo-lightbox-prev" type="button" aria-label="Předchozí fotografie"></button><img id="photo-lightbox-image" alt="" /><button class="photo-lightbox-nav photo-lightbox-next" id="photo-lightbox-next" type="button" aria-label="Následující fotografie"></button></div>
-    <div class="info-backdrop" id="info-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="info-title"><section class="info-panel"><button id="info-close" class="info-close" type="button" aria-label="Zavřít">×</button><h2 id="info-title"></h2><p>Informace připravujeme.</p></section></div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./app.js?v=21"></script>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="description" content="Explore the memory of European cities through photography and time. Start with the Prague archive." />
+<script>
+  const previousPage = document.referrer ? new URL(document.referrer) : null;
+  const returningFromCity = previousPage?.origin === location.origin && /\/(?:praha|city)(?:\.html)?$/.test(previousPage.pathname);
+  const returningThroughHistory = performance.getEntriesByType('navigation')[0]?.type === 'back_forward';
+  if (returningFromCity || returningThroughHistory) document.documentElement.classList.add('cities-returning');
+</script>
+  <title>Choose your city</title>
+  <link rel="stylesheet" href="./cities.css?v=19" />
+  <script>function openSavedPlace(){if(location.hash.startsWith('#place/'))location.replace('./praha.html'+location.search+location.hash)}openSavedPlace();window.addEventListener('hashchange',openSavedPlace);</script>
+</head>
+<body>
+  <header class="city-header"><a class="wordmark" href="./" aria-label="Home"><img class="city-logo" src="./city-logo.svg" width="112" height="112" alt="World Analog Archive" /></a><nav class="city-nav" aria-label="Main navigation"><button type="button" data-info="Mission">Mission</button><button type="button" data-info="Laboratory">Laboratory</button><button type="button" data-info="Contact">Contact</button><button type="button" data-info="Image policy">Image policy</button><button type="button" data-info="Q&amp;A">Q&amp;A</button></nav></header>
+
+  <main>
+    <div id="cities" class="city-grid" aria-label="European city archives"><section class="region"><h2>Central Europe</h2><ul><li><a class="city-link" aria-label="Paměť Prahy — otevřít archiv" href="./praha.html?enter=1"><span lang="cs">Paměť Prahy</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=berlin&amp;enter=1"><span lang="de">Gedächtnis Berlins</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=vienna&amp;enter=1"><span lang="de">Gedächtnis Wiens</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=budapest&amp;enter=1"><span lang="hu">Budapest emlékezete</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=warsaw&amp;enter=1"><span lang="pl">Pamięć Warszawy</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=zurich&amp;enter=1"><span lang="de">Gedächtnis Zürichs</span><span class="available" aria-hidden="true">→</span></a></li></ul></section>
+<section class="region"><h2>Western Europe</h2><ul><li><a class="city-link" href="./city.html?city=london&amp;enter=1"><span lang="en">Memory of London</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=paris&amp;enter=1"><span lang="fr">Mémoire de Paris</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=amsterdam&amp;enter=1"><span lang="nl">Geheugen van Amsterdam</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=brussels&amp;enter=1"><span lang="fr">Mémoire de Bruxelles</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=dublin&amp;enter=1"><span lang="ga">Cuimhne Bhaile Átha Cliath</span><span class="available" aria-hidden="true">→</span></a></li></ul></section>
+<section class="region"><h2>Northern Europe</h2><ul><li><a class="city-link" href="./city.html?city=copenhagen&amp;enter=1"><span lang="da">Københavns hukommelse</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=stockholm&amp;enter=1"><span lang="sv">Stockholms minne</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=oslo&amp;enter=1"><span lang="nb">Oslos minne</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=helsinki&amp;enter=1"><span lang="fi">Helsingin muisti</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=reykjavik&amp;enter=1"><span lang="is">Minni Reykjavíkur</span><span class="available" aria-hidden="true">→</span></a></li></ul></section>
+<section class="region"><h2>Southern Europe</h2><ul><li><a class="city-link" href="./city.html?city=rome&amp;enter=1"><span lang="it">Memoria di Roma</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=milan&amp;enter=1"><span lang="it">Memoria di Milano</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=madrid&amp;enter=1"><span lang="es">Memoria de Madrid</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=barcelona&amp;enter=1"><span lang="ca">Memòria de Barcelona</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=lisbon&amp;enter=1"><span lang="pt">Memória de Lisboa</span><span class="available" aria-hidden="true">→</span></a></li>
+<li><a class="city-link" href="./city.html?city=athens&amp;enter=1"><span lang="el">Μνήμη της Αθήνας</span><span class="available" aria-hidden="true">→</span></a></li></ul></section></div>
+  </main>
+  <dialog class="city-info" aria-labelledby="city-info-title">
+    <button class="city-info-close" type="button" aria-label="Close">×</button>
+    <h2 id="city-info-title"></h2><div class="city-info-body"><p>Informace připravujeme.</p></div>
+  </dialog>
+  <script src="./photo-credits.js?v=1"></script>
+  <script src="./cities.js?v=4"></script>
+</body>
+
 </html>
