@@ -583,3 +583,93 @@ body:has(.place-detail:not([hidden])) {
   }
   .archive-stage .history-photo img { border-width: 10px; }
 }
+
+/* Archive identity and search within the main menu. */
+.archive-home { display: block; flex-shrink: 0; line-height: 0; }
+.archive-home img { display: block; width: 44px; height: 44px; }
+.topbar-search { display: none; }
+.topbar[data-panel="search"] .topbar-search {
+  display: block; position: absolute; z-index: 1001; top: 100%;
+  right: clamp(28px, 4vw, 62px); width: 300px; max-width: calc(100vw - 40px);
+  padding: 12px 16px; background: #050505; border: 1px solid #343434;
+}
+@media (max-width: 800px) {
+  .archive-home { grid-area: 1 / 1; justify-self: start; }
+  .archive-home img { width: 36px; height: 36px; }
+  .topbar[data-panel="search"] .topbar-search {
+    grid-area: auto; right: 14px; left: 14px; width: auto; max-width: none;
+    padding: 12px 14px;
+  }
+}
+
+/* The city and its map initialize beneath the entry screen. */
+.city-loading { display: none; }
+.city-entering .city-loading {
+  position: fixed; inset: 0; z-index: 10000; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 24px; background: #fff; color: #626262;
+  font: 16px/1.4 Arial, Helvetica, sans-serif;
+}
+.city-loading img { width: 112px; height: 112px; }
+.city-loading-progress { width: 80px; height: 1px; background: #ddd; overflow: hidden; }
+.city-loading-progress::after { content: ''; display: block; height: 100%; background: #626262; transform-origin: left; animation: city-progress 2s linear both; }
+@keyframes city-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .city-loading-progress::after { animation: none; } }
+
+/* Light city header with Search as its only menu item. */
+.topbar { background: #fff; color: #626262; border-bottom-color: #e5e5e5; }
+.topbar-nav { color: #626262; }
+.topbar-nav button:hover { color: #292929; }
+.topbar[data-panel="search"] .topbar-search { background: #fff; border-color: #ddd; }
+.topbar-search input { color: #626262; border-color: #ccc; }
+.topbar-search input::placeholder { color: #737373; }
+.topbar-brand:focus-visible { outline-color: #626262; }
+@media (max-width: 800px) {
+  .topbar .topbar-nav { display: flex; grid-area: 1 / 3; position: static; width: auto; margin: 0; padding: 0; gap: 0; order: initial; justify-content: flex-end; font-size: 10px; }
+  .topbar-nav .nav-search-toggle { min-height: 44px; }
+}
+
+/* New city archives begin with the map and no documentation records. */
+.empty-city .places-panel { display: none; }
+.empty-city .explore-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
+@media (max-width: 800px) {
+  .empty-city .explore-layout { flex: 1; grid-template-rows: minmax(0, 1fr); min-height: 340px; }
+  .empty-city .brand-name { font-family: Arial, Helvetica, sans-serif; font-size: 11px; letter-spacing: 0; white-space: normal; }
+  .empty-city .topbar-brand { text-align: center; }
+}
+
+.archive-record-kind { font: 10px/1.5 Arial, Helvetica, sans-serif; color: #aaa; margin: 8px 0; }
+.month-tick.is-planned .record-dot { background: transparent; border: 1px solid #808080; }
+.planned-record { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; font-family: Arial, Helvetica, sans-serif; }
+.planned-record > span { color: #aaa; font-size: 14px; }
+.planned-record h2 { font-weight: 400; font-size: 24px; margin: 18px 0 12px; }
+.planned-record p { color: #aaa; font-size: 14px; line-height: 1.5; }
+.archive-photo-credit { position: absolute; left: 4%; right: 4%; bottom: 4px; margin: 0; text-align: center; color: #bbb; font: 11px/1.5 Arial, Helvetica, sans-serif; z-index: 20; }
+.archive-photo-credit a { color: inherit; text-underline-offset: 3px; }
+@media (max-width: 800px) { .archive-photo-credit { font-size: 10px; bottom: 0; } }
+
+/* Square display crops with a restrained photographic colour treatment. */
+:root { --archive-film-tone: saturate(.78) sepia(.12) contrast(.96) brightness(1.025); --archive-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23888' filter='url(%23grain)' d='M0 0h180v180H0z'/%3E%3C/svg%3E"); }
+.archive-stage .history-photo img { aspect-ratio: 1; object-fit: cover; object-position: center; }
+.place-image-wrap img, .place-thumbnail img, .map-pin img, .history-photo img, .photo-lightbox > img { object-fit: cover; object-position: center; }
+.place-image-wrap img:not([src$=".svg"]), .place-thumbnail img:not([src$=".svg"]), .map-pin img:not([src$=".svg"]), .history-photo img, .photo-lightbox > img { filter: var(--archive-film-tone); }
+.photo-lightbox > img { width: min(86vw, 86dvh); height: min(86vw, 86dvh); aspect-ratio: 1; }
+.place-image-wrap::after, .archive-stage .history-photo::after { content: ''; position: absolute; pointer-events: none; background-image: var(--archive-grain); background-repeat: repeat; opacity: .1; mix-blend-mode: soft-light; }
+.place-image-wrap::after { inset: 0; }
+.archive-stage .history-photo::after { inset: 20px; transform: translateX(var(--cover-shift, 0px)) perspective(1000px) rotateY(var(--cover-tilt, 0deg)) scale(var(--cover-scale, 1)); }
+@media (max-width: 800px) { .archive-stage .history-photo::after { inset: 10px; } }
+
+/* Keep marker crops square despite the map library's image sizing. */
+#map .map-pin{width:68px;height:68px;aspect-ratio:1}
+#map .map-pin img{position:absolute;inset:0;display:block;width:68px;height:68px;max-width:none;max-height:none;aspect-ratio:1;object-fit:cover;object-position:center;box-sizing:border-box}
+
+/* City dialogs and photo windows share the same upward fade. */
+.info-backdrop.is-open .info-panel, .photo-lightbox.is-open > img {
+  animation: popup-rise .5s cubic-bezier(.16,1,.3,1) both;
+}
+.topbar[data-panel="search"] .topbar-search { animation: popup-search-rise .4s cubic-bezier(.16,1,.3,1) both; }
+@keyframes popup-rise { from { opacity: 0; transform: translateY(80px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes popup-search-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .info-backdrop.is-open .info-panel, .photo-lightbox.is-open > img, .topbar[data-panel="search"] .topbar-search { animation: none; }
+}

@@ -7,7 +7,8 @@ const photoHistory = (slug, years, label) => years.map((year) => {
   return { month: `${year.value}-01`, year: String(year.value), date: String(year.value), photos };
 });
 
-const places = [
+const archiveCenter = window.archiveCity?.center || [50.0875, 14.4213];
+const places = window.archiveCity ? (window.archiveCity.places || []) : [
   { id: "philharmonic", name: "Vltavská filharmonie", subtitle: "Holešovice · Praha 7", category: "Kultura", coordinates: [50.0998, 14.4384], description: "Nová koncertní síň na břehu Vltavy. Prohlédněte si fotografie místa v jednotlivých letech.", history: photoHistory("vltavska", [{ value: 2029, count: 3 }, { value: 2031, count: 3 }, { value: 2033, count: 4 }], "Vltavská filharmonie") },
   { id: "bubny", name: "Nádraží Bubny", subtitle: "Bubny · Praha 7", category: "Doprava", coordinates: [50.1082, 14.4385], description: "Proměna nádraží Bubny zachycená v různých letech.", history: photoHistory("nadrazi-bubny", [{ value: 2024, count: 3 }, { value: 2026, count: 1 }], "Nádraží Bubny") },
   { id: "jiriho-namesti", name: "Náměstí Jiřího z Poděbrad", subtitle: "Vinohrady · Praha 3", category: "Veřejný prostor", coordinates: [50.0773, 14.4505], description: "Fotografický záznam proměn náměstí Jiřího z Poděbrad.", history: photoHistory("namesti-jiriho-z-podebrad", [{ value: 2024, count: 3 }, { value: 2025, count: 3 }, { value: 2027, count: 3 }], "Náměstí Jiřího z Poděbrad") },
@@ -17,12 +18,13 @@ const places = [
   { id: "rail-bridge", name: "Železniční most", subtitle: "Výtoň · Praha 2", category: "Doprava", coordinates: [50.0677, 14.4141], description: "Fotografie železničního mostu a jeho okolí v různých letech.", history: photoHistory("zeleznicni-most", [{ value: 2026, count: 9, extension: "jpg" }, { value: 2029, count: 2 }, { value: 2030, count: 3 }, { value: 2032, count: 4 }], "Železniční most") },
 ];
 
-const monthStart = new Date(Date.UTC(2020, 0, 1));
+const firstArchiveYear = window.archiveCity && places.length ? Math.min(2020, ...places.flatMap(place => place.history.map(event => Number(event.year)))) : 2020;
+const monthStart = new Date(Date.UTC(firstArchiveYear, 0, 1));
 const monthEnd = new Date(Date.UTC(2036, 11, 1));
 const months = [];
 for (let date = new Date(monthStart); date <= monthEnd; date.setUTCMonth(date.getUTCMonth() + 1)) months.push(`${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`);
 
-const state = { month: "2029-01", placeId: null, detailPlaceId: null, map: null, markers: new Map(), query: "" };
+const state = { month: window.archiveCity?.places?.[0]?.history[0]?.month || "2029-01", placeId: null, detailPlaceId: null, map: null, markers: new Map(), query: "" };
 const $ = (selector) => document.querySelector(selector);
 let monthScrollFrame = null;
 let lightboxPhotos = [];
@@ -120,7 +122,7 @@ function icon(name) {
   return icons[name];
 }
 function monthDate(key) { const [year, month] = key.split("-").map(Number); return new Date(Date.UTC(year, month - 1, 1)); }
-function fullMonth(key) { const d = monthDate(key); return new Intl.DateTimeFormat("cs", { month: "long", year: "numeric", timeZone: "UTC" }).format(d); }
+function fullMonth(key) { const d = monthDate(key); return new Intl.DateTimeFormat(window.archiveCity?.lang || "cs", { month: "long", year: "numeric", timeZone: "UTC" }).format(d); }
 function monthIndex(key) { return months.indexOf(key); }
 function selectedPlace() { return places.find((place) => place.id === state.placeId) || null; }
 function detailPlace() { return places.find((place) => place.id === state.detailPlaceId) || null; }
@@ -172,7 +174,8 @@ function renderMonthTrack(animate = false) {
   track.innerHTML = months.map((month) => {
     const record = recordsForMonth(month), year = month.endsWith("-01");
     const label = record && year ? month.slice(0, 4) : fullMonth(month);
-    return `<button class="month-tick ${record ? "has-entry" : ""} ${year ? "year-tick" : ""}" data-month="${month}" aria-label="${label}" aria-pressed="${month === state.month}" ${record ? `title="${label}"` : `disabled aria-disabled="true" title="V tomto datu nejsou fotografie"`}><span class="tick-mark"></span>${record ? '<span class="record-dot"></span>' : ""}</button>`;
+    const planned = (detailPlace() ? [detailPlace()] : places).some(place => eventsForMonth(place, month)?.kind === "planned");
+    return `<button class="month-tick ${planned ? "is-planned" : ""} ${record ? "has-entry" : ""} ${year ? "year-tick" : ""}" data-month="${month}" aria-label="${label}" aria-pressed="${month === state.month}" ${record ? `title="${label}${planned ? " · Planned documentation" : ""}"` : `disabled aria-disabled="true" title="V tomto datu nejsou fotografie"`}><span class="tick-mark"></span>${record ? '<span class="record-dot"></span>' : ""}</button>`;
   }).join("");
   track.querySelectorAll("[data-month]:not(:disabled)").forEach((button) => button.addEventListener("click", () => setMonth(button.dataset.month)));
   const activeTick = track.querySelector(`[data-month="${state.month}"]`);
@@ -234,9 +237,9 @@ function renderPlaces(animatePhotos = false) {
     return `<article class="place-card ${isSelected ? "is-selected" : ""}" data-place-card="${place.id}">
       <div class="place-card-main" data-select-place="${place.id}" tabindex="0" aria-label="Zobrazit ${place.name} na mapě">
         <div class="place-image-wrap"><img src="${photos[0].src}" alt="${photos[0].alt}" loading="lazy"/></div>
-        <div class="place-card-side"><div class="place-card-title">${place.name}</div>
+        <div class="place-card-side"><div class="place-card-title">${place.name}</div>${window.archiveCity ? `<p class="archive-record-kind">${displayEvent.kind === "planned" ? `Planned documentation · ${displayEvent.year}` : `Photograph · ${displayEvent.year}`}</p>` : ""}
           <div class="place-thumbnails" aria-label="Vybrat fotografii">${photos.slice(0, 5).map((photo, index) => `<button class="place-thumbnail ${index === 0 ? "is-active" : ""}" type="button" data-photo-index="${index}" aria-label="Zobrazit fotografii ${index + 1}" aria-pressed="${index === 0}"><img src="${photo.src}" alt="${photo.alt}" loading="lazy"/></button>`).join("")}</div>
-          <span class="place-card-dot" aria-hidden="true"></span><button class="open-history" data-open-place="${place.id}">Otevřít</button>
+          <span class="place-card-dot" aria-hidden="true"></span><button class="open-history" data-open-place="${place.id}">Open</button>
         </div>
       </div></article>`;
   }).join("") || '<p class="empty-search">Žádné místo neodpovídá hledání.</p>';
@@ -278,7 +281,7 @@ function selectPlace(placeId, options = {}) {
   state.placeId = state.placeId === placeId && options.toggle ? null : placeId;
   const place = selectedPlace(); renderPlaces(); updateMarkerStyles();
   if (place && options.pan) state.map.flyTo(place.coordinates, Math.max(state.map.getZoom(), 14), { duration: .65 });
-  else if (!place && options.pan) state.map.flyTo([50.0875, 14.4213], 12, { duration: .65 });
+  else if (!place && options.pan) state.map.flyTo(archiveCenter, 12, { duration: .65 });
 }
 function setMonth(month) {
   if (!months.includes(month) || !hasPhotosForMonth(month)) return;
@@ -374,8 +377,13 @@ function setupCoverFlow(layer) {
   measure();
 }
 
+function archiveEscape(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[character]));
+}
 function archiveEventMarkup(event) {
-  if (!event) return '<p class="archive-empty">Pro toto datum nejsou fotografie.</p>';
+if (!event) return '<p class="archive-empty">Pro toto datum nejsou fotografie.</p>';
+if (event.kind === 'planned') return `<div class="planned-record"><span>${event.year}</span><h2>Planned documentation</h2><p>No photograph has been recorded for this year.</p></div>`;
+
   return `<div class="history-photos" tabindex="0" aria-label="Fotografie z roku ${event.year}">${event.photos.map((photo) => `<button class="history-photo" type="button" data-fullscreen-photo aria-label="Zobrazit fotografii přes celou obrazovku: ${photo.alt}"><img src="${photo.src}" alt="${photo.alt}"/></button>`).join("")}</div>`;
 }
 function archiveLayerMarkup(event, type = "current") {
@@ -458,7 +466,7 @@ function closeDetail({ updateUrl = true } = {}) {
 function returnToMap() {
   if (state.detailPlaceId) closeDetail();
   state.placeId = null; renderPlaces(); updateMarkerStyles();
-  if (state.map) state.map.flyTo([50.0875, 14.4213], 12, { duration: .65 });
+  if (state.map) state.map.flyTo(archiveCenter, 12, { duration: .65 });
 }
 function openPhoto(button) {
   const image = button.querySelector("img"), row = button.closest(".history-row"), lightbox = $("#photo-lightbox");
@@ -491,7 +499,7 @@ let aerialLayer = null;
 let pendingAerialLayer = null;
 
 function updateAerialMap() {
-  if (!state.map || state.detailPlaceId) return;
+  if (!state.map || state.detailPlaceId || window.archiveCity) return;
   const selectedYear = Number(state.month.slice(0, 4));
   const [year, layerId] = aerialLayers.find(([captureYear]) => captureYear <= selectedYear);
   if (pendingAerialLayer?.captureYear === year) return;
@@ -540,14 +548,14 @@ function updateAerialMap() {
 }
 
 async function setupMap() {
-  state.map = L.map("map", { zoomControl: false, scrollWheelZoom: true, preferCanvas: true }).setView([50.0875, 14.4213], 12);
+  state.map = L.map("map", { zoomControl: false, scrollWheelZoom: true, preferCanvas: true }).setView(archiveCenter, 12);
   state.map.attributionControl.setPosition("bottomleft").setPrefix(false);
   state.map.on("moveend", reorderPlacesForMap);
   const initialAerialLayer = updateAerialMap();
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, zIndex: 0, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors' }).addTo(state.map);
   // Let the visible map load before warming the rest of the photo archive.
   const photoWarmup = window.setTimeout(preloadAllPhotos, 3500);
-  initialAerialLayer.once("load", () => {
+  initialAerialLayer?.once("load", () => {
     window.clearTimeout(photoWarmup);
     preloadAllPhotos();
   });
@@ -562,7 +570,7 @@ $("#month-back").innerHTML = icon("left"); $("#month-forward").innerHTML = icon(
 $("#detail-back").addEventListener("click", closeDetail);
 $(".topbar-brand").addEventListener("click", (event) => { event.preventDefault(); returnToMap(); });
 $("#month-back").addEventListener("click", () => nudgeMonth(-1)); $("#month-forward").addEventListener("click", () => nudgeMonth(1));
-$("#map-home").addEventListener("click", () => { state.placeId = null; renderPlaces(); updateMarkerStyles(); state.map.flyTo([50.0875, 14.4213], 12, { duration: .65 }); });
+$("#map-home").addEventListener("click", () => { state.placeId = null; renderPlaces(); updateMarkerStyles(); state.map.flyTo(archiveCenter, 12, { duration: .65 }); });
 $("#month-viewport").addEventListener("scroll", () => requestAnimationFrame(updateTickScale), { passive: true });
 window.addEventListener("resize", () => { renderMonthTrack(false); state.map?.invalidateSize(); });
 $("#place-detail").addEventListener("click", (event) => { const button = event.target.closest("[data-fullscreen-photo]"); if (button) openPhoto(button); });
@@ -593,7 +601,7 @@ const menuToggle = $(".mobile-menu-toggle");
 function setHeaderPanel(panel) {
   header.dataset.panel = panel;
   searchToggle.setAttribute("aria-expanded", String(panel === "search"));
-  menuToggle.setAttribute("aria-expanded", String(panel === "menu"));
+  menuToggle?.setAttribute("aria-expanded", String(panel === "menu"));
 }
 
 searchToggle.addEventListener("click", () => {
@@ -601,7 +609,7 @@ searchToggle.addEventListener("click", () => {
   setHeaderPanel(opening ? "search" : "");
   if (opening) $("#place-search").focus();
 });
-menuToggle.addEventListener("click", () => {
+menuToggle?.addEventListener("click", () => {
   setHeaderPanel(header.dataset.panel === "menu" ? "" : "menu");
 });
 $("#header-menu").addEventListener("click", (event) => {
@@ -614,5 +622,5 @@ header.addEventListener("keydown", (event) => {
   if (event.key !== "Escape" || !header.dataset.panel) return;
   const toggle = header.dataset.panel === "search" ? searchToggle : menuToggle;
   setHeaderPanel("");
-  toggle.focus();
+  toggle?.focus();
 });

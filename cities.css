@@ -1,0 +1,84 @@
+@font-face{font-family:Komera;src:url('./KameraBASIC2-Skelet3.otf') format('opentype');font-display:swap}
+:root{font-family:Arial,Helvetica,sans-serif;color:#626262;background:#fff;font-synthesis:none;color-scheme:light}
+*{box-sizing:border-box}body{margin:0;min-height:100svh;display:flex;flex-direction:column}a{color:inherit}a:focus-visible{outline:2px solid #626262;outline-offset:8px}.city-header{display:flex;align-items:center;justify-content:space-between;padding:34px clamp(24px,6vw,96px);gap:24px}.wordmark{font-family:Komera,'Arial Narrow',sans-serif;font-size:21px;letter-spacing:.14em;text-decoration:none;white-space:nowrap}.header-note{font-size:14px;color:#737373}main{width:100%;max-width:1600px;margin:0 auto;flex:1;padding:64px clamp(24px,8vw,128px) 80px}.intro{margin-bottom:64px}.eyebrow{text-transform:uppercase;font-size:12px;letter-spacing:.15em;color:#737373;margin:0 0 18px}h1{font-size:clamp(36px,4vw,58px);letter-spacing:-.045em;font-weight:400;margin:0 0 18px;line-height:1.1}.intro-note{font-size:16px;color:#737373;line-height:1.5;margin:0}.city-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:40px}.region h2{font-weight:400;font-size:20px;letter-spacing:-.02em;margin:0 0 26px}.region ul{list-style:none;margin:0;padding:0}.region li{min-height:51px;font-size:16px;line-height:1.4;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;padding:12px 0}.city-pending{color:#737373}.pending-label{font-size:11px;color:#737373}.city-link{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;text-decoration:none;width:100%;transition:color .2s}.available{color:#626262;font-size:11px}.city-link:hover{color:#626262}.city-link:hover .available{text-decoration:underline;text-underline-offset:4px}footer{display:flex;justify-content:space-between;gap:24px;padding:26px clamp(24px,6vw,96px);border-top:1px solid #e5e5e5;font-size:12px;color:#737373;line-height:1.5}
+@media(min-width:1200px){.city-pending .pending-label{display:none}.city-pending:hover .pending-label{display:inline}}
+@media(max-width:1000px){.city-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:48px 40px}main{padding-top:48px}.intro{margin-bottom:48px}}
+@media(max-width:520px){.city-header{padding-top:27px;padding-bottom:27px}.wordmark{font-size:17px}.header-note{font-size:12px}main{padding-top:38px;padding-bottom:52px}.city-grid{grid-template-columns:1fr;gap:38px}.region h2{margin-bottom:14px;font-size:21px}.region li{min-height:48px}.pending-label{margin-left:auto}.city-link{justify-content:space-between}.intro{margin-bottom:44px}footer{flex-direction:column;gap:4px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.city-logo{display:block;width:112px;height:112px;object-fit:contain}.wordmark{display:block;flex-shrink:0}.city-header{padding-top:24px;padding-bottom:24px}main{padding-top:36px}@media(max-width:520px){.city-logo{width:88px;height:88px}.city-header{padding-top:20px;padding-bottom:20px}main{padding-top:30px}}
+
+.city-header{justify-content:center}main{padding-top:48px}@media(max-width:520px){main{padding-top:36px}}
+
+.city-header{padding-bottom:0}main{padding-top:140px}
+
+.region li{min-height:43px;padding-top:8px;padding-bottom:8px}@media(max-width:520px){.region li{min-height:40px}}
+
+.city-header { position: relative; }
+.city-nav { position: absolute; right: clamp(24px, 6vw, 96px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 20px; font-size: 13px; }
+.city-nav a, .city-nav button { color: #626262; font: inherit; text-decoration: none; border: 0; padding: 8px 0; background: none; cursor: pointer; }
+.city-nav a:hover, .city-nav button:hover { color: #292929; }
+.city-nav button:focus-visible, .city-info button:focus-visible { outline: 1px solid #626262; outline-offset: 5px; }
+.city-info { width: min(500px, calc(100vw - 40px)); padding: 42px; border: 1px solid #ddd; background: #fff; color: #626262; }
+.city-info::backdrop { background: rgb(0 0 0 / 25%); }
+.city-info h2 { margin: 0 0 18px; font-size: 22px; font-weight: 400; }
+.city-info p { font-size: 16px; line-height: 1.5; }
+.city-info-close { position: absolute; right: 16px; top: 10px; border: 0; background: none; color: inherit; font-size: 26px; cursor: pointer; }
+@media (max-width: 1000px) {
+  .city-header { flex-direction: column; gap: 22px; }
+  .city-nav { position: static; transform: none; justify-content: center; flex-wrap: wrap; gap: 8px 20px; }
+  .city-nav a, .city-nav button { min-height: 44px; display: inline-flex; align-items: center; }
+}
+
+/* Reveal each part in a deliberate sequence when returning to the directory. */
+.cities-returning .wordmark { animation: cities-appear .65s ease-out both; }
+.cities-returning .city-nav > * { animation: cities-appear .5s ease-out both; animation-delay: .3s; }
+.cities-returning .city-nav > :nth-child(2) { animation-delay: .4s; }
+.cities-returning .city-nav > :nth-child(3) { animation-delay: .5s; }
+.cities-returning .city-nav > :nth-child(4) { animation-delay: .6s; }
+.cities-returning .region { animation: cities-appear .7s cubic-bezier(.2,.65,.3,1) both; animation-delay: .7s; }
+.cities-returning .region:nth-child(2) { animation-delay: .95s; }
+.cities-returning .region:nth-child(3) { animation-delay: 1.2s; }
+.cities-returning .region:nth-child(4) { animation-delay: 1.45s; }
+@keyframes cities-appear {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cities-returning .wordmark, .cities-returning .city-nav > *, .cities-returning .region { animation: none; }
+}
+
+.city-link .available{color:#9a9a9a;font:400 16px/1 Arial,Helvetica,sans-serif}.city-link:hover .available{color:#626262;text-decoration:none}
+
+.city-nav{top:calc(50% + 20px)}@media(max-width:1000px){.city-nav{margin-top:20px}}
+
+.city-info{max-height:80dvh;overflow-y:auto}.city-info-body section{padding:16px 0;border-top:1px solid #e5e5e5}.city-info-body h3{font-size:16px;font-weight:400;margin:0 0 8px}.city-info-body section p{font-size:13px;line-height:1.6;margin:0}.city-info-body a{text-underline-offset:3px}
+
+/* Keep the directory menu in the lower-right corner. */
+.city-nav{position:fixed;top:auto;bottom:24px;right:clamp(24px,6vw,96px);transform:none;margin-top:0;z-index:30;background:#fff;padding:8px 12px}
+@media(max-width:1000px){.city-nav{position:fixed;top:auto;bottom:20px;right:20px;left:auto;transform:none;margin-top:0;gap:8px 16px}.city-header{gap:0}main{padding-bottom:120px}}
+@media(max-width:520px){.city-nav{bottom:12px;right:12px;max-width:calc(100vw - 24px);font-size:12px;padding:4px 10px;gap:4px 14px}}
+
+.cities-returning .city-nav > :nth-child(5){animation-delay:.7s}
+
+.city-info[data-section="Mission"] { width: min(1040px, calc(100vw - 48px)); max-height: 90dvh; padding: 38px; }
+.city-info[data-section="Mission"] > h2 { margin-bottom: 28px; }
+.mission-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; align-items: start; }
+.mission-photo { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; object-position: center; }
+.city-info .mission-text p { font-size: 15px; line-height: 1.75; margin: 0 0 20px; }
+.city-info .mission-text p:first-child { font-size: 18px; line-height: 1.6; }
+.city-info .mission-text p:last-child { margin-bottom: 0; }
+@media (max-width: 720px) {
+  .city-info[data-section="Mission"] { padding: 28px 22px; width: calc(100vw - 28px); }
+  .mission-layout { grid-template-columns: 1fr; gap: 24px; }
+  .mission-photo { aspect-ratio: 4 / 3; }
+  .city-info .mission-text p { font-size: 15px; line-height: 1.7; }
+  .city-info .mission-text p:first-child { font-size: 17px; }
+}
+
+/* Shared entrance for every directory dialog. */
+.city-info[open] { animation: popup-rise .5s cubic-bezier(.16,1,.3,1) both; }
+.city-info[open]::backdrop { animation: popup-backdrop .35s ease-out both; }
+@keyframes popup-rise { from { opacity: 0; transform: translateY(80px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes popup-backdrop { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .city-info[open], .city-info[open]::backdrop { animation: none; } }
