@@ -947,3 +947,20 @@ body:has(.place-detail:not([hidden])) {
 .news-article-sources a { display: block; margin: 8px 0; color: #bbb; text-decoration: none; }
 .news-article-sources a:hover { text-decoration: underline; }
 .city-news.is-entering .news-card:nth-child(4) { animation-delay: .3s; }
+
+/* Read each story as a full-page view; closing restores the journal list. */
+.news-article-dialog { inset: 0; margin: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; border: 0; padding: 72px clamp(24px,8vw,120px) 88px; }
+.news-article-dialog::backdrop { background: var(--paper); }
+.news-article-body { width: 100%; max-width: 900px; margin: 0 auto; }
+.news-article-body > h1, .news-article-body > p { max-width: 640px; margin-left: auto; margin-right: auto; }
+.news-article-body > h1 { margin-bottom: 24px; }
+.news-article-body > .news-eyebrow { margin-bottom: 24px; }
+.news-article-body > .news-article-intro { margin-bottom: 36px; }
+.news-article-close { position: fixed; top: 18px; right: 22px; z-index: 2; width: 48px; height: 48px; background: var(--paper); font-size: 30px; }
+.news-article-body .news-article-image { margin: 40px 0; }
+.news-article-sources { max-width: 640px; margin-left: auto; margin-right: auto; }
+@media (max-width: 800px) {
+  .news-article-dialog { padding: 76px 24px 56px; }
+  .news-article-close { top: 10px; right: 10px; }
+  .news-article-body .news-article-image { margin: 30px 0; }
+}
