@@ -56,6 +56,10 @@ function preloadPhoto(src) {
 function pumpPhotoQueue() {
   while (activePhotoLoads < 4 && photoLoadQueue.length) photoLoadQueue.shift()();
 }
+function fadeInPhoto(image) {
+  if (!image || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  image.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 450, easing: 'ease-out' });
+}
 function prepareImage(image) {
   const src = image.currentSrc || image.src;
   if (!src || image.dataset.preparedSrc === src) return;
@@ -63,44 +67,66 @@ function prepareImage(image) {
   image.classList.add("photo-pending");
   preloadPhoto(src).then(() => {
     if (image.isConnected && image.dataset.preparedSrc === src) {
-      image.classList.remove("photo-pending"); image.classList.add("photo-ready");
+      image.classList.remove("photo-pending"); image.classList.add("photo-ready"); fadeInPhoto(image);
     }
   });
 }
-async function updatePhoto(container, src, alt, animate = false) {
+async function updatePhoto(container, src, alt, showLoading = false) {
   const url = new URL(src, document.baseURI).href;
-  if (photoUpdates.get(container)?.url === url) return;
+  const previous = photoUpdates.get(container);
+  if (!showLoading && previous?.url === url) return;
+  previous?.animation?.cancel();
+  const loadingDuration = showLoading ? 800 + Math.random() * 600 : 0;
   const update = { url };
   photoUpdates.set(container, update);
-  const current = [...container.querySelectorAll("img")].at(-1);
-  if (current.src === url) {
+  const current = [...container.querySelectorAll('img')].at(-1);
+  const unchanged = current?.src === url;
+  if (!showLoading && unchanged) {
+    container.classList.remove('is-photo-loading');
+    container.setAttribute('aria-busy', 'false');
+    container.querySelector('.tile-photo-loading')?.remove();
     current.alt = alt;
     prepareImage(current);
     return;
   }
-
-  if (!await preloadPhoto(url) || photoUpdates.get(container) !== update || !container.isConnected) return;
-  const incoming = new Image();
-  incoming.src = url;
-  incoming.alt = alt;
-  incoming.dataset.preparedSrc = url;
-  try { await incoming.decode(); } catch { return; }
-  if (photoUpdates.get(container) !== update || !container.isConnected) return;
-
-  const outgoing = [...container.querySelectorAll("img")];
-  outgoing.at(-1).after(incoming);
-  if (!animate || matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    outgoing.forEach((image) => image.remove());
-    return;
+  if (showLoading) {
+    let loader = container.querySelector('.tile-photo-loading');
+    if (!loader) {
+      loader = document.createElement('div');
+      loader.className = 'tile-photo-loading';
+      loader.setAttribute('role', 'status');
+      loader.setAttribute('aria-label', 'Sourcing photograph');
+      loader.innerHTML = '<span class="tile-loading-label" aria-hidden="true">Sourcing photograph</span><span class="inline-loading-progress" aria-hidden="true"><span class="inline-progress-fill"></span></span>';
+      container.append(loader);
+    }
+    container.classList.add('is-photo-loading');
+    container.setAttribute('aria-busy', 'true');
+    update.animation = startInlinePhotoLoading(container, loadingDuration);
   }
-  outgoing.forEach((image) => image.setAttribute("aria-hidden", "true"));
-  incoming.classList.add("photo-dissolve");
-  // Keep the previous photo underneath so the blend never fades through the background.
-  const fade = incoming.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 800, easing: "ease-in-out", fill: "backwards" });
-  fade.onfinish = () => {
-    outgoing.forEach((image) => image.remove());
-    incoming.classList.remove("photo-dissolve");
-  };
+  const [loaded] = await Promise.all([
+    preloadPhoto(url),
+    new Promise(resolve => window.setTimeout(resolve, loadingDuration)),
+  ]);
+  update.animation?.cancel();
+  if (photoUpdates.get(container) !== update || !container.isConnected) return;
+  if (loaded && !unchanged) {
+    const incoming = new Image();
+    incoming.src = url;
+    incoming.alt = alt;
+    incoming.dataset.preparedSrc = url;
+    incoming.classList.add('photo-ready');
+    try { await incoming.decode(); } catch { /* Keep the loaded image if decoding is unavailable. */ }
+    if (photoUpdates.get(container) !== update || !container.isConnected) return;
+    const outgoing = [...container.querySelectorAll('img')];
+    container.prepend(incoming);
+    outgoing.forEach(image => image.remove());
+  } else if (current) {
+    current.alt = alt;
+  }
+  container.classList.remove('is-photo-loading');
+  container.setAttribute('aria-busy', 'false');
+  container.querySelector('.tile-photo-loading')?.remove();
+  fadeInPhoto(container.querySelector('img'));
 }
 
 function prepareImages(root = document) {
@@ -140,11 +166,11 @@ function recordsForMonth(month) {
 function scrollTimelineTo(viewport, target, animate) {
   if (monthScrollFrame !== null) cancelAnimationFrame(monthScrollFrame);
   const start = viewport.scrollLeft, distance = target - start;
-  if (!animate || Math.abs(distance) < 1) { viewport.scrollLeft = target; monthScrollFrame = null; updateTickScale(); return; }
+  if (!animate || Math.abs(distance) < 1) { viewport.scrollLeft = target; monthScrollFrame = null; return; }
   const startedAt = performance.now(), duration = 800;
   const frame = (now) => {
     const progress = Math.min(1, (now - startedAt) / duration), eased = 0.5 - Math.cos(progress * Math.PI) / 2;
-    viewport.scrollLeft = start + distance * eased; updateTickScale();
+    viewport.scrollLeft = start + distance * eased;
     if (progress < 1) monthScrollFrame = requestAnimationFrame(frame); else monthScrollFrame = null;
   };
   monthScrollFrame = requestAnimationFrame(frame);
@@ -154,19 +180,6 @@ function timelineCenterOffset(viewport) {
   const ruler = viewport.getBoundingClientRect();
   return ruler.left + ruler.width / 2 - (controls.left + controls.width / 2);
 }
-function updateTickScale() {
-  const viewport = $("#month-viewport");
-  if (!viewport) return;
-  const box = viewport.getBoundingClientRect(), center = box.left + box.width / 2, radius = Math.max(1, box.width / 2);
-  viewport.querySelectorAll(".month-tick").forEach((tick) => {
-    const r = tick.getBoundingClientRect(), x = r.left + r.width / 2, distance = Math.abs(x - center) / radius;
-    const centerLift = Math.exp(-Math.pow((x - center) / Math.max(75, box.width * .2), 2));
-    const edgeFade = Math.max(.82, 1 - distance ** 2 * .18);
-    const scale = (.78 + .26 * centerLift) * edgeFade;
-    tick.style.setProperty("--tick-scale", String(scale));
-    tick.style.setProperty("--record-dot-top", `${tick.clientHeight / 2 + 7.5 * scale + 5}px`);
-  });
-}
 function renderMonthTrack(animate = false) {
   const track = $("#month-track");
   const viewport = $("#month-viewport");
@@ -175,7 +188,7 @@ function renderMonthTrack(animate = false) {
     const record = recordsForMonth(month), year = month.endsWith("-01");
     const label = record && year ? month.slice(0, 4) : fullMonth(month);
     const planned = (detailPlace() ? [detailPlace()] : places).some(place => eventsForMonth(place, month)?.kind === "planned");
-    return `<button class="month-tick ${planned ? "is-planned" : ""} ${record ? "has-entry" : ""} ${year ? "year-tick" : ""}" data-month="${month}" aria-label="${label}" aria-pressed="${month === state.month}" ${record ? `title="${label}${planned ? " · Planned documentation" : ""}"` : `disabled aria-disabled="true" title="V tomto datu nejsou fotografie"`}><span class="tick-mark"></span>${record ? '<span class="record-dot"></span>' : ""}</button>`;
+    return `<button class="month-tick ${planned ? "is-planned" : ""} ${record ? "has-entry" : ""} ${year ? "year-tick" : ""}" data-month="${month}" aria-label="${label}" aria-pressed="${month === state.month}" ${record ? `title="${label}${planned ? " · Planned documentation" : ""}"` : `disabled aria-disabled="true" title="V tomto datu nejsou fotografie"`}><span class="tick-mark"></span></button>`;
   }).join("");
   track.querySelectorAll("[data-month]:not(:disabled)").forEach((button) => button.addEventListener("click", () => setMonth(button.dataset.month)));
   const activeTick = track.querySelector(`[data-month="${state.month}"]`);
@@ -188,7 +201,7 @@ function renderMonthTrack(animate = false) {
   track.insertAdjacentHTML("beforeend", extension);
   // Rebuilding the track briefly shortens it and can clamp the scroll position.
   viewport.scrollLeft = previousScroll;
-  updateTickScale();
+ 
   const controls = $(".timeline-controls");
   controls.style.setProperty("--timeline-center-offset", `${timelineCenterOffset(viewport)}px`);
   $("#active-month").textContent = state.month.endsWith("-01") && recordsForMonth(state.month) ? state.month.slice(0, 4) : fullMonth(state.month);
@@ -197,7 +210,6 @@ function renderMonthTrack(animate = false) {
     const target = viewport.scrollLeft + tickRect.left - viewportRect.left - viewport.clientWidth / 2 + tickRect.width / 2;
     scrollTimelineTo(viewport, target, animate);
   }
-  else updateTickScale();
 }
 
 function filteredPlaces() {
@@ -238,31 +250,61 @@ function renderPlaces(animatePhotos = false) {
       <div class="place-card-main" data-select-place="${place.id}" tabindex="0" aria-label="Zobrazit ${place.name} na mapě">
         <div class="place-image-wrap"><img src="${photos[0].src}" alt="${photos[0].alt}" loading="lazy"/></div>
         <div class="place-card-side"><div class="place-card-title">${place.name}</div>${window.archiveCity ? `<p class="archive-record-kind">${displayEvent.kind === "planned" ? `Planned documentation · ${displayEvent.year}` : `Photograph · ${displayEvent.year}`}</p>` : ""}
-          <div class="place-thumbnails" aria-label="Vybrat fotografii">${photos.slice(0, 5).map((photo, index) => `<button class="place-thumbnail ${index === 0 ? "is-active" : ""}" type="button" data-photo-index="${index}" aria-label="Zobrazit fotografii ${index + 1}" aria-pressed="${index === 0}"><img src="${photo.src}" alt="${photo.alt}" loading="lazy"/></button>`).join("")}</div>
-          <span class="place-card-dot" aria-hidden="true"></span><button class="open-history" data-open-place="${place.id}">Open</button>
+          <button class="open-history" data-open-place="${place.id}">Open</button>
         </div>
       </div></article>`;
-  }).join("") || '<p class="empty-search">Žádné místo neodpovídá hledání.</p>';
+  }).join("") || '<p class="empty-search">No places match your search.</p>';
   for (const card of container.querySelectorAll("[data-place-card]")) {
     const previous = previousPhotos.get(card.dataset.placeCard);
-    if (!previous) continue;
+    if (!animatePhotos) continue;
     const next = card.querySelector(".place-image-wrap");
     const photo = next.querySelector("img");
-    next.replaceWith(previous);
-    updatePhoto(previous, photo.src, photo.alt, true);
+    if (previous) next.replaceWith(previous);
+    updatePhoto(previous || next, photo.src, photo.alt, true);
   }
   prepareImages(container);
   container.querySelectorAll("[data-select-place]").forEach((el) => {
     el.addEventListener("click", () => selectPlace(el.dataset.selectPlace, { pan: true }));
     el.addEventListener("keydown", (event) => { if (event.target === el && ["Enter", " "].includes(event.key)) { event.preventDefault(); selectPlace(el.dataset.selectPlace, { pan: true }); } });
   });
-  container.querySelectorAll("[data-photo-index]").forEach((button) => button.addEventListener("click", (event) => {
-    event.stopPropagation(); const card = button.closest(".place-card"), buttons = [...card.querySelectorAll("[data-photo-index]")], image = button.querySelector("img");
-    updatePhoto(card.querySelector(".place-image-wrap"), image.src, image.alt);
-    buttons.forEach((item) => { const active = item === button; item.classList.toggle("is-active", active); item.setAttribute("aria-pressed", String(active)); });
-    card.querySelector(".place-card-dot").style.left = `${13.5 + Number(button.dataset.photoIndex) * 31}px`;
-  }));
-  container.querySelectorAll("[data-open-place]").forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); openDetail(button.dataset.openPlace); }));
+  container.querySelectorAll("[data-open-place]").forEach((button) => button.addEventListener("click", (event) => { event.stopPropagation(); locateThenOpen(button.dataset.openPlace); }));
+}
+
+async function locateThenOpen(placeId) {
+  const place = places.find(item => item.id === placeId);
+  if (!place) return;
+  const token = (state.locateOpenToken || 0) + 1;
+  state.locateOpenToken = token;
+  state.placeId = placeId;
+  renderPlaces();
+  updateMarkerStyles();
+  const map = state.map;
+  if (map) {
+    map.stop();
+    const targetZoom = Math.max(map.getZoom(), 14);
+    const alreadyLocated = map.getCenter().distanceTo(L.latLng(place.coordinates)) < 2 && map.getZoom() === targetZoom;
+    if (!alreadyLocated) {
+      await new Promise(resolve => {
+        let timeout;
+        const finish = () => {
+          window.clearTimeout(timeout);
+          map.off('moveend', finish);
+          resolve();
+        };
+        map.once('moveend', finish);
+        timeout = window.setTimeout(finish, 1800);
+        map.flyTo(place.coordinates, targetZoom, {
+          duration: .9,
+          animate: !matchMedia('(prefers-reduced-motion: reduce)').matches,
+        });
+      });
+    }
+    if (token !== state.locateOpenToken) return;
+    // Keep the centered, highlighted building visible before entering its archive.
+    await new Promise(resolve => window.setTimeout(resolve, 350));
+  }
+  if (token !== state.locateOpenToken) return;
+  openDetail(placeId);
 }
 
 function updateMarkerStyles(animatePhotos = false) {
@@ -278,6 +320,7 @@ function updateMarkerStyles(animatePhotos = false) {
   }
 }
 function selectPlace(placeId, options = {}) {
+  state.locateOpenToken = (state.locateOpenToken || 0) + 1;
   state.placeId = state.placeId === placeId && options.toggle ? null : placeId;
   const place = selectedPlace(); renderPlaces(); updateMarkerStyles();
   if (place && options.pan) state.map.flyTo(place.coordinates, Math.max(state.map.getZoom(), 14), { duration: .65 });
@@ -294,87 +337,84 @@ function nudgeMonth(offset) {
   while (index >= 0 && index < months.length) { if (hasPhotosForMonth(months[index])) { setMonth(months[index]); return; } index += step; }
 }
 
-function setupCoverFlow(layer) {
-  const flow = layer.querySelector(".history-photos");
-  if (!flow) return;
-  const photos = [...flow.querySelectorAll(".history-photo")];
-  let centered = 0;
-  let frame = null;
-  let photoWidth, snapPositions, spacing;
+function inlinePhotoLoadingMarkup(hidden = false) {
+  return `<div class="photo-inline-loading" ${hidden ? 'hidden' : ''} role="status" aria-live="polite">
+    <img src="./city-logo.svg" width="56" height="56" alt=""/>
+    <p>sourcing images from analog archive</p>
+    <span class="inline-loading-progress" aria-hidden="true"><span class="inline-progress-fill"></span></span>
+  </div>`;
+}
+function startInlinePhotoLoading(root, duration = 900) {
+  const fill = root.querySelector('.inline-progress-fill');
+  if (!fill || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+  const first = .12 + Math.random() * .2;
+  const second = .5 + Math.random() * .18;
+  return fill.animate([
+    { offset: 0, transform: 'scaleX(0)' },
+    { offset: .18 + Math.random() * .08, transform: `scaleX(${first})` },
+    { offset: .36, transform: `scaleX(${first})` },
+    { offset: .52 + Math.random() * .1, transform: `scaleX(${second})` },
+    { offset: .76, transform: `scaleX(${second})` },
+    { offset: 1, transform: 'scaleX(.92)' },
+  ], { duration, fill: 'forwards', easing: 'ease-in-out' });
+}
 
-  function measure() {
-    photoWidth = photos[0].offsetWidth || 1;
-    const centerOffset = (photoWidth - flow.clientWidth) / 2;
-    snapPositions = photos.map((photo) => photo.offsetLeft + centerOffset);
-    spacing = snapPositions[1] - snapPositions[0] || photoWidth;
-    update();
-  }
-
-  function update() {
-    const scrollLeft = flow.scrollLeft;
-    let closest = Infinity;
-    photos.forEach((photo, index) => {
-      const offset = snapPositions[index] - scrollLeft;
-      const distance = offset / photoWidth;
-      if (Math.abs(distance) < closest) {
-        closest = Math.abs(distance);
-        centered = index;
-      }
-      const overlap = Math.max(0, Math.abs(offset) - spacing) * .2;
-      photo.style.setProperty("--cover-shift", `${-Math.sign(offset) * overlap}px`);
-      const tilt = Math.max(-1, Math.min(1, distance * 1.7));
-      photo.style.setProperty("--cover-tilt", `${tilt * -52}deg`);
-      photo.style.setProperty("--cover-scale", String(1 - Math.abs(tilt) * .23));
-      photo.style.zIndex = String(photos.length - Math.round(Math.min(photos.length, Math.abs(distance))));
-    });
-  }
-
-  function centerPhoto(photo) {
-    flow.scrollTo({
-      left: snapPositions[photos.indexOf(photo)],
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
-    });
-  }
-
-  let lastWheelStep = -Infinity;
-  flow.addEventListener("wheel", (event) => {
-    if (event.ctrlKey || event.shiftKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
-    event.preventDefault();
-    if (event.timeStamp - lastWheelStep < 220) return;
-    lastWheelStep = event.timeStamp;
-    const photo = photos[centered + Math.sign(event.deltaY)];
-    if (photo) centerPhoto(photo);
-  }, { passive: false });
-  flow.addEventListener("scroll", () => {
-    if (frame !== null) return;
-    frame = requestAnimationFrame(() => {
-      frame = null;
-      update();
-    });
-  }, { passive: true });
-  const resizeObserver = new ResizeObserver(() => {
-    if (flow.isConnected) measure();
-    else resizeObserver.disconnect();
-  });
-  resizeObserver.observe(flow);
-  flow.addEventListener("click", (event) => {
-    const photo = event.target.closest(".history-photo");
-    if (!photo || photo === photos[centered]) return;
-    event.stopPropagation();
-    centerPhoto(photo);
-  });
-  flow.addEventListener("keydown", (event) => {
-    if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const index = centered + (event.key === "ArrowLeft" ? -1 : 1);
-    const photo = photos[index];
-    if (photo) {
-      photo.focus({ preventScroll: true });
-      centerPhoto(photo);
+function setupPhotoViewer(layer) {
+  const viewer = layer.querySelector('.single-photo-viewer');
+  const place = detailPlace();
+  const event = place && eventsForMonth(place, state.month);
+  if (!viewer || !event?.photos.length) return;
+  const frame = viewer.querySelector('.single-photo-frame');
+  const photoButton = viewer.querySelector('.single-photo');
+  const image = photoButton.querySelector('img');
+  const next = viewer.querySelector('.load-next-photo');
+  const counter = viewer.querySelector('.photo-counter');
+  const loading = viewer.querySelector('.photo-inline-loading');
+  const status = loading.querySelector('p');
+  let index = 0;
+  let busy = false;
+  next.disabled = event.photos.length < 2;
+  next.addEventListener('click', async () => {
+    if (busy || event.photos.length < 2) return;
+    busy = true;
+    next.disabled = true;
+    photoButton.disabled = true;
+    frame.classList.add('is-loading');
+    frame.setAttribute('aria-busy', 'true');
+    loading.hidden = false;
+    status.textContent = 'sourcing images from analog archive';
+    const nextIndex = (index + 1) % event.photos.length;
+    const photo = event.photos[nextIndex];
+    const progressAnimation = startInlinePhotoLoading(viewer);
+    const [loaded] = await Promise.all([
+      preloadPhoto(photo.src),
+      new Promise(resolve => window.setTimeout(resolve, 1000)),
+    ]);
+    progressAnimation?.cancel();
+    if (!viewer.isConnected || detailPlace()?.id !== place.id || state.month !== event.month) return;
+    if (!loaded) {
+      status.textContent = 'Unable to load this photograph. Please try again.';
+      busy = false;
+      next.disabled = false;
+      frame.setAttribute('aria-busy', 'false');
+      return;
     }
+    index = nextIndex;
+    image.src = photo.src;
+    image.alt = photo.alt;
+    image.dataset.preparedSrc = new URL(photo.src, location.href).href;
+    image.classList.remove('photo-pending');
+    image.classList.add('photo-ready');
+    photoButton.setAttribute('aria-label', `Open photograph ${index + 1} of ${event.photos.length}`);
+    counter.textContent = `${index + 1}/${event.photos.length}`;
+    loading.hidden = true;
+    frame.classList.remove('is-loading');
+    frame.setAttribute('aria-busy', 'false');
+    photoButton.disabled = false;
+    busy = false;
+    next.disabled = false;
+    fadeInPhoto(image);
   });
-  measure();
 }
 
 function archiveEscape(value) {
@@ -384,7 +424,15 @@ function archiveEventMarkup(event) {
 if (!event) return '<p class="archive-empty">Pro toto datum nejsou fotografie.</p>';
 if (event.kind === 'planned') return `<div class="planned-record"><span>${event.year}</span><h2>Planned documentation</h2><p>No photograph has been recorded for this year.</p></div>`;
 
-  return `<div class="history-photos" tabindex="0" aria-label="Fotografie z roku ${event.year}">${event.photos.map((photo) => `<button class="history-photo" type="button" data-fullscreen-photo aria-label="Zobrazit fotografii přes celou obrazovku: ${photo.alt}"><img src="${photo.src}" alt="${photo.alt}"/></button>`).join("")}</div>`;
+const photo = event.photos[0];
+return `<div class="single-photo-viewer">
+  <div class="single-photo-frame" aria-busy="false">
+    <button class="history-photo single-photo" type="button" data-fullscreen-photo aria-label="Open photograph 1 of ${event.photos.length}"><img src="${archiveEscape(photo.src)}" alt="${archiveEscape(photo.alt)}"/></button>
+    ${inlinePhotoLoadingMarkup(true)}
+  </div>
+  <div class="single-photo-controls"><button class="load-next-photo" type="button" ${event.photos.length < 2 ? 'disabled' : ''}>Load next photograph</button><span class="photo-counter" aria-live="polite">1/${event.photos.length}</span></div>
+</div>`;
+
 }
 function archiveLayerMarkup(event, type = "current") {
   return `<div class="archive-content ${type}" aria-label="Fotografie roku ${event?.year || ""}">${archiveEventMarkup(event)}</div>`;
@@ -396,76 +444,121 @@ function historyMarkup(place) {
   </section>`;
 }
 async function renderArchiveEvent(place, animate = false) {
-  const stage = $("#archive-stage"); if (!stage) return;
+  const stage = $('#archive-stage');
+  if (!stage) return;
   const event = eventsForMonth(place, state.month);
-  if (!animate) { stage.innerHTML = archiveLayerMarkup(event); prepareImages(stage); setupCoverFlow(stage); return; }
-  const token = (state.archiveRenderToken || 0) + 1; state.archiveRenderToken = token;
-  await Promise.all(event?.photos.map((photo) => preloadPhoto(photo.src)) || []);
-  if (token !== state.archiveRenderToken || !detailPlace() || !stage.isConnected) return;
-  stage.querySelectorAll(".archive-content.outgoing").forEach((layer) => layer.remove());
-  const outgoing = stage.querySelector(".archive-content.current");
-  outgoing?.getAnimations().forEach((animation) => animation.cancel());
-  const incoming = document.createElement("div");
-  incoming.innerHTML = archiveLayerMarkup(event, "incoming");
-  const nextLayer = incoming.firstElementChild;
-  stage.append(nextLayer); prepareImages(nextLayer); setupCoverFlow(nextLayer);
-  nextLayer.getBoundingClientRect();
-  requestAnimationFrame(() => {
-    if (token !== state.archiveRenderToken) return;
-    nextLayer.classList.remove("incoming"); nextLayer.classList.add("current", "photo-transitioned");
-    nextLayer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1500, easing: "ease-in-out", fill: "both" });
-    if (outgoing) {
-      const outgoingOpacity = Number(getComputedStyle(outgoing).opacity);
-      outgoing.classList.add("outgoing");
-      outgoing.animate([{ opacity: outgoingOpacity }, { opacity: 0 }], { duration: 1500, easing: "ease-in-out", fill: "both" });
-    }
-  });
-  window.setTimeout(() => {
-    if (token !== state.archiveRenderToken) return;
-    outgoing?.remove();
-  }, 1560);
+  const token = (state.archiveRenderToken || 0) + 1;
+  state.archiveRenderToken = token;
+  if (animate) {
+    stage.innerHTML = `<div class="archive-content current"><div class="single-photo-viewer">
+      <div class="single-photo-frame is-loading" aria-busy="true">${inlinePhotoLoadingMarkup()}</div>
+      <div class="single-photo-controls" style="visibility:hidden" aria-hidden="true"><span>Load next photograph</span><span>1/1</span></div>
+    </div></div>`;
+    const progress = startInlinePhotoLoading(stage);
+    await Promise.all([
+      Promise.all(event?.photos.map(photo => preloadPhoto(photo.src)) || []),
+      new Promise(resolve => window.setTimeout(resolve, 1000)),
+    ]);
+    progress?.cancel();
+    if (token !== state.archiveRenderToken || detailPlace()?.id !== place.id || !stage.isConnected) return;
+  }
+  stage.innerHTML = archiveLayerMarkup(event);
+  prepareImages(stage);
+  setupPhotoViewer(stage);
 }
 function syncHash() {
   const next = state.detailPlaceId ? `#place/${state.detailPlaceId}` : "#";
   if (location.hash !== next) history.replaceState(null, "", next);
 }
-function openDetail(placeId, { updateUrl = true } = {}) {
+let archiveLoadingProgress = null;
+function showArchiveLoading() {
+  let overlay = document.querySelector('.archive-loading');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'archive-loading';
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.innerHTML = '<img src="./city-logo.svg" width="112" height="112" alt=""/><p>sourcing images from analog archive</p><span class="city-loading-progress" aria-hidden="true"><span class="archive-progress-fill"></span></span>';
+    document.body.append(overlay);
+  }
+overlay.classList.add('is-loading');
+const fill = overlay.querySelector('.archive-progress-fill');
+archiveLoadingProgress?.cancel();
+fill.style.transform = 'scaleX(0)';
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  fill.style.transform = 'scaleX(.5)';
+} else {
+  const frames = [{ offset: 0, transform: 'scaleX(0)' }];
+  let progress = 0;
+  for (let step = 1; step <= 6; step++) {
+    const offset = step / 7 + (Math.random() - .5) * .055;
+    progress += .065 + Math.random() * .07;
+    const transform = `scaleX(${progress})`;
+    frames.push({ offset, transform, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    frames.push({ offset: offset + .025 + Math.random() * .045, transform });
+  }
+  // Hold short of completion if image retrieval takes longer than the minimum.
+  frames.push({ offset: 1, transform: 'scaleX(.92)' });
+  archiveLoadingProgress = fill.animate(frames, { duration: 2800, fill: 'forwards' });
+}
+
+  $('.app-shell').inert = true;
+  $('.topbar').inert = true;
+}
+function hideArchiveLoading() {
+  archiveLoadingProgress?.cancel();
+  archiveLoadingProgress = null;
+  document.querySelector('.archive-loading')?.classList.remove('is-loading');
+  $('.app-shell').inert = false;
+  $('.topbar').inert = false;
+}
+function openDetail(placeId, { updateUrl = true, showLoading = true } = {}) {
+  state.locateOpenToken = (state.locateOpenToken || 0) + 1;
+
   const place = places.find((item) => item.id === placeId); if (!place) return;
   state.detailPlaceId = placeId; state.placeId = placeId;
   const nearest = [...place.history].sort((a, b) => Math.abs(monthIndex(a.month) - monthIndex(state.month)) - Math.abs(monthIndex(b.month) - monthIndex(state.month)))[0];
   if (nearest) state.month = nearest.month;
   const openToken = (state.detailOpenToken || 0) + 1; state.detailOpenToken = openToken;
-  const selectedEvent = eventsForMonth(place, state.month);
-  $("#explore-layout").classList.add("is-leaving");
-  Promise.all(selectedEvent?.photos.map((photo) => preloadPhoto(photo.src)) || []).then(() => {
+const selectedEvent = eventsForMonth(place, state.month);
+if (showLoading) showArchiveLoading();
+$('#explore-layout').classList.add('is-leaving');
+const preload = Promise.all(selectedEvent?.photos.map(photo => preloadPhoto(photo.src)) || []);
+const minimumLoading = new Promise(resolve => window.setTimeout(resolve, showLoading ? 3000 : 160));
+Promise.all([preload, minimumLoading]).then(() => {
+  if (openToken !== state.detailOpenToken || state.detailPlaceId !== placeId) return;
+  $('#explore-layout').hidden = true;
+  $('#place-detail').innerHTML = historyMarkup(place);
+  $('#place-detail').hidden = false;
+  prepareImages($('#place-detail'));
+  setupPhotoViewer($('#place-detail'));
+  $('#detail-title').textContent = place.name;
+  $('#detail-title').hidden = false;
+  $('#detail-back').hidden = false;
+  renderMonthTrack(false);
+  requestAnimationFrame(() => {
     if (openToken !== state.detailOpenToken || state.detailPlaceId !== placeId) return;
-    window.setTimeout(() => {
-      if (openToken !== state.detailOpenToken || state.detailPlaceId !== placeId) return;
-    $("#explore-layout").hidden = true;
-    $("#place-detail").innerHTML = historyMarkup(place); $("#place-detail").hidden = false;
-    prepareImages($("#place-detail")); setupCoverFlow($("#place-detail"));
-    requestAnimationFrame(() => $("#place-detail").classList.add("is-visible"));
-    $("#detail-title").textContent = place.name;
-    $("#detail-title").hidden = false;
-    $("#detail-back").hidden = false;
-    renderMonthTrack(false);
-    }, 160);
+    $('#place-detail').classList.add('is-visible');
+    if (showLoading) hideArchiveLoading();
   });
+});
   renderMonthTrack(true); updateMarkerStyles(); if (updateUrl) syncHash();
   if (state.map) state.map.flyTo(place.coordinates, Math.max(state.map.getZoom(), 14), { duration: .65 });
 }
 function closeDetail({ updateUrl = true } = {}) {
+  hideArchiveLoading();
   state.detailOpenToken = (state.detailOpenToken || 0) + 1;
   state.archiveRenderToken = (state.archiveRenderToken || 0) + 1;
   $("#place-detail").classList.remove("is-visible");
   $("#detail-title").hidden = true;
   $("#detail-back").hidden = true;
-  window.setTimeout(() => { $("#place-detail").hidden = true; $("#explore-layout").hidden = false; $("#explore-layout").classList.remove("is-leaving"); state.map?.invalidateSize(); updateAerialMap(); }, 320);
-  state.detailPlaceId = null; state.placeId = null; renderMonthTrack(false); renderPlaces(); updateMarkerStyles(); if (updateUrl) syncHash();
+  window.setTimeout(() => { $("#place-detail").hidden = true; $("#explore-layout").hidden = false; $("#explore-layout").classList.remove("is-leaving"); state.map?.invalidateSize(); updateAerialMap(); renderPlaces(true); updateMarkerStyles(true); }, 320);
+  state.detailPlaceId = null; state.placeId = null; renderMonthTrack(false); if (updateUrl) syncHash();
 }
 function returnToMap() {
+  state.locateOpenToken = (state.locateOpenToken || 0) + 1;
   if (state.detailPlaceId) closeDetail();
-  state.placeId = null; renderPlaces(); updateMarkerStyles();
+  else { state.placeId = null; renderPlaces(true); updateMarkerStyles(true); }
   if (state.map) state.map.flyTo(archiveCenter, 12, { duration: .65 });
 }
 function openPhoto(button) {
@@ -560,18 +653,15 @@ async function setupMap() {
     preloadAllPhotos();
   });
   L.control.zoom({ position: "bottomright" }).addTo(state.map);
-  const initialPins = places.map((place) => (eventsForMonth(place, state.month) || latestEventForMonth(place, state.month) || place.history[0]).photos[0].src);
-  await Promise.all([...new Set(initialPins)].map(preloadPhoto));
   for (const place of places) { const marker = L.marker(place.coordinates).addTo(state.map); marker.on("click", () => openDetail(place.id)); state.markers.set(place.id, marker); }
-  updateMarkerStyles(); setTimeout(() => state.map.invalidateSize(), 80);
+  updateMarkerStyles(!document.documentElement.classList.contains('city-entering')); setTimeout(() => state.map.invalidateSize(), 80);
 }
 
-$("#month-back").innerHTML = icon("left"); $("#month-forward").innerHTML = icon("right"); $("#map-home").innerHTML = icon("locate");
+$("#month-back").innerHTML = '<span class="timeline-arrow" aria-hidden="true">←</span>' + '<span class="timeline-arrow-label">Previous year</span>'; $("#month-forward").innerHTML = '<span class="timeline-arrow" aria-hidden="true">→</span>' + '<span class="timeline-arrow-label">Next year</span>'; $("#map-home").innerHTML = icon("locate");
 $("#detail-back").addEventListener("click", closeDetail);
 $(".topbar-brand").addEventListener("click", (event) => { event.preventDefault(); returnToMap(); });
 $("#month-back").addEventListener("click", () => nudgeMonth(-1)); $("#month-forward").addEventListener("click", () => nudgeMonth(1));
 $("#map-home").addEventListener("click", () => { state.placeId = null; renderPlaces(); updateMarkerStyles(); state.map.flyTo(archiveCenter, 12, { duration: .65 }); });
-$("#month-viewport").addEventListener("scroll", () => requestAnimationFrame(updateTickScale), { passive: true });
 window.addEventListener("resize", () => { renderMonthTrack(false); state.map?.invalidateSize(); });
 $("#place-detail").addEventListener("click", (event) => { const button = event.target.closest("[data-fullscreen-photo]"); if (button) openPhoto(button); });
 $("#photo-lightbox-close").innerHTML = icon("close"); $("#photo-lightbox-close").addEventListener("click", closePhoto);
@@ -590,9 +680,11 @@ document.querySelectorAll("[data-info]").forEach((button) => button.addEventList
 $("#info-close").addEventListener("click", () => { $("#info-dialog").classList.remove("is-open"); setTimeout(() => { $("#info-dialog").hidden = true; }, 180); });
 window.addEventListener("hashchange", () => { const id = location.hash.startsWith("#place/") ? location.hash.slice(7) : null; if (id && id !== state.detailPlaceId) openDetail(id, { updateUrl: false }); else if (!id && state.detailPlaceId) closeDetail({ updateUrl: false }); });
 
-setupMap(); renderMonthTrack(); renderPlaces();
+setupMap(); renderMonthTrack(); renderPlaces(!document.documentElement.classList.contains('city-entering'));
+window.addEventListener('archive-map-visible', () => { if (!state.detailPlaceId) { renderPlaces(true); updateMarkerStyles(true); } });
+window.addEventListener('pageshow', event => { if (event.persisted && !state.detailPlaceId) { renderPlaces(true); updateMarkerStyles(true); } });
 const initialPlace = location.hash.startsWith("#place/") ? location.hash.slice(7) : null;
-if (initialPlace) openDetail(initialPlace, { updateUrl: false });
+if (initialPlace) openDetail(initialPlace, { updateUrl: false, showLoading: false });
 
 const header = $(".topbar");
 const searchToggle = $(".mobile-search-toggle");

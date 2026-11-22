@@ -258,7 +258,7 @@ body { width: 100%; height: 100%; min-height: 100vh; zoom: 1; }
 .active-month { top: -27px; font-size: 10px; text-transform: uppercase; }
 .month-track { align-items: center; gap: 1px; padding-top: 0; }
 .month-tick { height: 31px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: visible; }
-.tick-mark { width: 2px; height: 15px !important; transform: scaleY(var(--tick-scale, .8)); transform-origin: center; background: #666 !important; transition: background .2s ease; }
+.tick-mark { width: 2px; height: 15px !important; transform: none; transform-origin: center; background: #666 !important; transition: background .2s ease; }
 .month-tick.year-tick .tick-mark { background: #747474 !important; }
 .month-tick.has-entry .tick-mark { background: #a9a9a9 !important; }
 .month-tick:disabled .tick-mark, .month-tick:disabled.year-tick .tick-mark { height: 15px !important; background: #666 !important; }
@@ -388,7 +388,7 @@ body { width: 100%; height: 100%; min-height: 100vh; zoom: 1; }
 .archive-stage .history-photo img {
   background: transparent;
   box-sizing: border-box;
-  border: 20px solid #fff;
+  border: 10px solid #fff;
   object-fit: contain;
   transform: translateX(var(--cover-shift, 0px)) perspective(1000px) rotateY(var(--cover-tilt, 0deg)) scale(var(--cover-scale, 1));
 }
@@ -581,7 +581,7 @@ body:has(.place-detail:not([hidden])) {
     /* Center on the screen when there is room below the timeline. */
     margin-top: max(0px, calc(100cqh - 50dvh - var(--cover-size) / 2 - 8px));
   }
-  .archive-stage .history-photo img { border-width: 10px; }
+  .archive-stage .history-photo img { border-width: 5px; }
 }
 
 /* Archive identity and search within the main menu. */
@@ -656,8 +656,8 @@ body:has(.place-detail:not([hidden])) {
 .photo-lightbox > img { width: min(86vw, 86dvh); height: min(86vw, 86dvh); aspect-ratio: 1; }
 .place-image-wrap::after, .archive-stage .history-photo::after { content: ''; position: absolute; pointer-events: none; background-image: var(--archive-grain); background-repeat: repeat; opacity: .1; mix-blend-mode: soft-light; }
 .place-image-wrap::after { inset: 0; }
-.archive-stage .history-photo::after { inset: 20px; transform: translateX(var(--cover-shift, 0px)) perspective(1000px) rotateY(var(--cover-tilt, 0deg)) scale(var(--cover-scale, 1)); }
-@media (max-width: 800px) { .archive-stage .history-photo::after { inset: 10px; } }
+.archive-stage .history-photo::after { inset: 10px; transform: translateX(var(--cover-shift, 0px)) perspective(1000px) rotateY(var(--cover-tilt, 0deg)) scale(var(--cover-scale, 1)); }
+@media (max-width: 800px) { .archive-stage .history-photo::after { inset: 5px; } }
 
 /* Keep marker crops square despite the map library's image sizing. */
 #map .map-pin{width:68px;height:68px;aspect-ratio:1}
@@ -672,4 +672,151 @@ body:has(.place-detail:not([hidden])) {
 @keyframes popup-search-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
   .info-backdrop.is-open .info-panel, .photo-lightbox.is-open > img, .topbar[data-panel="search"] .topbar-search { animation: none; }
+}
+
+/* Retrieve the gallery while a three-second archive screen is visible. */
+.archive-loading { display: none; }
+.archive-loading.is-loading {
+  position: fixed; inset: 0; z-index: 10001; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 24px; padding: 24px; background: #fff; color: #626262;
+  font: 16px/1.5 Arial, Helvetica, sans-serif; text-align: center;
+}
+.archive-loading img { display: block; width: 112px; height: 112px; }
+.archive-loading p { margin: 0; }
+.archive-loading.is-loading > * { animation: popup-rise .5s cubic-bezier(.16,1,.3,1) both; }
+.archive-loading.is-loading .city-loading-progress::after { animation: city-progress 3s linear both; }
+@media (prefers-reduced-motion: reduce) {
+  .archive-loading.is-loading > *, .archive-loading.is-loading .city-loading-progress::after { animation: none; }
+}
+
+.archive-loading .city-loading-progress::after{display:none}
+.archive-loading .archive-progress-fill{display:block;width:100%;height:100%;background:#626262;transform:scaleX(0);transform-origin:left}
+
+/* One square photograph at a time, with loading contained in its frame. */
+.single-photo-viewer {
+  --single-size: min(72vw, max(1px, calc(100cqh - 84px)), 640px);
+  height: 100cqh; min-height: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px; padding: 8px 0 20px;
+}
+.single-photo-frame { position: relative; flex: 0 0 auto; width: var(--single-size); height: var(--single-size); }
+.archive-stage .single-photo { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; margin: 0; }
+.archive-stage .single-photo img, .archive-stage .single-photo::after { transform: none; }
+.single-photo-frame.is-loading .single-photo { opacity: 0; pointer-events: none; }
+.single-photo-controls { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: var(--single-size); color: #ededed; font: 12px/1.5 Arial, Helvetica, sans-serif; }
+.load-next-photo { padding: 4px 0; border: 0; border-bottom: 1px solid #888; background: transparent; font: inherit; cursor: pointer; }
+.load-next-photo:hover:not(:disabled) { border-color: #fff; }
+.load-next-photo:disabled { opacity: .4; cursor: default; }
+.photo-counter { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.photo-inline-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 20px; background: #fff; color: #626262; font: 13px/1.5 Arial, Helvetica, sans-serif; text-align: center; }
+.photo-inline-loading[hidden] { display: none; }
+.photo-inline-loading > img { width: 56px; height: 56px; }
+.photo-inline-loading p { margin: 0; }
+.inline-loading-progress { display: block; width: 80px; height: 1px; background: #ddd; overflow: hidden; }
+.inline-progress-fill { display: block; width: 100%; height: 100%; transform: scaleX(.5); transform-origin: left; background: #626262; }
+@media (max-width: 800px) { .single-photo-viewer { --single-size: min(82vw, max(1px, calc(100cqh - 84px)), 520px); } }
+
+.photo-inline-loading{background:var(--paper);color:#bdbdbd}
+.photo-inline-loading .inline-loading-progress{background:#555}
+.photo-inline-loading .inline-progress-fill{background:#ccc}
+
+/* Full-width ruler, independent of the map and card margins. */
+.app-shell { --timeline-gutter: clamp(22px, 3vw, 56px); padding-inline: var(--timeline-gutter); }
+.timeline { width: calc(100% + 2 * var(--timeline-gutter)); margin-inline: calc(-1 * var(--timeline-gutter)); }
+.timeline-controls { width: 100%; height: 40px; display: block; margin-inline: 0; }
+.timeline-controls .month-viewport { width: 100%; mask-image: linear-gradient(to right, transparent, #000 44px, #000 calc(100% - 44px), transparent); }
+.timeline-controls > .round-button { position: absolute; top: 8px; z-index: 7; }
+#month-back { left: 10px; }
+#month-forward { right: 10px; }
+.timeline:has(.timeline-place-title:not([hidden])) { grid-template-columns: minmax(0, 1fr) 80px minmax(0, 1fr); column-gap: 0; row-gap: 14px; }
+.timeline:has(.timeline-place-title:not([hidden])) .timeline-controls { grid-column: 1 / -1; grid-row: 2; }
+.timeline .detail-back { grid-column: 1; grid-row: 1; margin-left: var(--timeline-gutter); }
+.timeline-place-title { grid-column: 3; grid-row: 1; margin-right: var(--timeline-gutter); }
+@media (max-width: 800px) { .app-shell { --timeline-gutter: 18px; } }
+@media (max-width: 480px) { .app-shell { --timeline-gutter: 12px; } }
+
+/* Date navigation stays beside the centered year. */
+#month-back{left:calc(50% - 84px);top:-31px}
+#month-forward{right:calc(50% - 84px);top:-31px}
+
+/* Records are white ticks; date navigation sits below the ruler. */
+.timeline-controls { height: 76px; }
+.active-month { top: 52px; }
+#month-back, #month-forward { top: 44px; }
+.timeline-pointer { top: 34px; border-top: 0; border-bottom: 8px solid #b74f55; }
+.record-dot { display: none; }
+.month-tick.has-entry .tick-mark { background: #808080 !important; }
+
+/* Let the ruler begin at the boundary beneath the white header. */
+.timeline { padding-top: 0; }
+.month-tick { justify-content: flex-start; }
+.tick-mark { transform-origin: top; }
+.timeline:has(.timeline-place-title:not([hidden])) { row-gap: 0; }
+.timeline:has(.timeline-place-title:not([hidden])) .timeline-controls { grid-row: 1; }
+.timeline .detail-back { grid-row: 1; align-self: end; margin-bottom: 12px; z-index: 8; }
+.timeline-place-title { grid-row: 1; align-self: end; margin-bottom: 14px; z-index: 8; }
+
+.timeline{padding-top:15px}
+
+/* Year changes retrieve card and marker photographs without cross-fades. */
+.place-image-wrap.is-photo-loading > img, .map-pin.is-photo-loading > img { visibility: hidden; }
+.place-image-wrap > img, .map-pin > img { transition: none !important; }
+.tile-photo-loading { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 8px; background: var(--paper); color: #bbb; pointer-events: none; text-align: center; font: 10px/1.5 Arial, Helvetica, sans-serif; }
+.tile-photo-loading .inline-loading-progress { width: min(64px, 80%); background: #555; }
+.tile-photo-loading .inline-progress-fill { background: #ccc; }
+.map-pin .tile-loading-label { display: none; }
+.map-pin .tile-photo-loading { padding: 8px; border: 1px solid #ececec; }
+.map-pin .tile-photo-loading .inline-loading-progress { width: 34px; }
+
+/* Reveal photographs from the surrounding surface, including during loading. */
+.place-image-wrap, #map .map-pin,
+.place-image-wrap .tile-photo-loading, #map .map-pin .tile-photo-loading { background: #000; }
+#map .map-pin .tile-photo-loading { border: 0; }
+.single-photo-frame, .archive-stage .single-photo,
+.single-photo-frame .photo-inline-loading { background: var(--paper); }
+
+.timeline-arrow-label { position: absolute; width: max-content; color: #aaa; font: 9px/1.3 Arial, Helvetica, sans-serif; white-space: nowrap; }
+#month-back .timeline-arrow-label { right: calc(100% + 8px); }
+#month-forward .timeline-arrow-label { left: calc(100% + 8px); }
+@media (max-width: 480px) {
+  .timeline-arrow-label { font-size: 8px; }
+  #month-back .timeline-arrow-label { right: calc(100% + 5px); }
+  #month-forward .timeline-arrow-label { left: calc(100% + 5px); }
+  .timeline:has(.timeline-place-title:not([hidden])) .timeline-arrow-label { top: 28px; }
+}
+
+/* Use the same unframed straight arrows as the city selection links. */
+#month-back, #month-forward { background: transparent; border-radius: 0; color: #9a9a9a; }
+#month-back:hover, #month-forward:hover { background: transparent; color: #ccc; }
+.timeline-arrow { font: 400 16px/1 Arial, Helvetica, sans-serif; }
+
+/* Larger date navigation with generous touch targets on every screen. */
+#month-back, #month-forward { width: 44px; height: 44px; top: 34px; }
+#month-back { left: calc(50% - 74px); }
+#month-forward { right: calc(50% - 74px); }
+.timeline-arrow { font-size: 23px; }
+.timeline-arrow-label { font-size: 12px; }
+#month-back .timeline-arrow-label { right: 100%; }
+#month-forward .timeline-arrow-label { left: 100%; }
+@media (max-width: 480px) {
+  .timeline-arrow-label { font-size: 10px; }
+  .timeline:has(.timeline-place-title:not([hidden])) #month-back .timeline-arrow-label,
+  .timeline:has(.timeline-place-title:not([hidden])) #month-forward .timeline-arrow-label {
+    top: 40px; left: 50%; right: auto; transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 480px) {
+  .timeline-place-title { max-width: 72px; justify-self: end; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* Invisible hit areas include the arrow captions without enlarging the artwork. */
+#month-back::before, #month-forward::before { content: ''; position: absolute; top: -8px; bottom: -8px; }
+#month-back::before { left: -86px; right: 0; }
+#month-forward::before { left: 0; right: -66px; }
+@media (max-width: 480px) {
+  #month-back::before { left: -64px; }
+  #month-forward::before { right: -48px; }
+  .timeline:has(.timeline-place-title:not([hidden])) #month-back::before,
+  .timeline:has(.timeline-place-title:not([hidden])) #month-forward::before { left: -12px; right: -12px; bottom: -24px; }
 }

@@ -82,3 +82,8 @@
 @keyframes popup-rise { from { opacity: 0; transform: translateY(80px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes popup-backdrop { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .city-info[open], .city-info[open]::backdrop { animation: none; } }
+
+/* Reveal the archive photograph after it has decoded. */
+.mission-photo { opacity: 0; transition: opacity .45s ease-out; }
+.mission-photo.is-ready { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .mission-photo { transition: none; } }
