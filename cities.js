@@ -23,7 +23,10 @@ function renderMission(body) {
     text.append(element);
   }
   layout.append(photo, text);
-  body.append(layout);
+body.append(layout);
+photo.decode().catch(() => {}).then(() => {
+  if (photo.isConnected) photo.classList.add('is-ready');
+});
 }
 
 function renderImagePolicy(body) {

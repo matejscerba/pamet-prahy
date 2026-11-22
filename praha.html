@@ -13,6 +13,7 @@
       document.querySelector('.topbar').inert = true;
       setTimeout(() => {
         document.documentElement.classList.remove('city-entering');
+        window.dispatchEvent(new Event('archive-map-visible'));
         document.querySelector('.app-shell').inert = false;
         document.querySelector('.topbar').inert = false;
         const url = new URL(location.href);
@@ -26,7 +27,7 @@
     <link rel="preconnect" href="https://gs-pub.praha.eu" />
     <link rel="preconnect" href="https://tile.openstreetmap.org" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=34" />
+    <link rel="stylesheet" href="./styles.css?v=54" />
 </head>
 <body>
   <div class="city-loading" role="status" aria-live="polite" aria-label="Načítání Prahy">
@@ -37,7 +38,7 @@
 
     <header class="topbar" aria-label="Hlavička webu">
       <a class="archive-home" href="./" aria-label="World Analog Archive — výběr města"><img src="./city-logo.svg" width="44" height="44" alt="World Analog Archive" /></a>
-      <div class="topbar-search" id="header-search"><label class="visually-hidden" for="place-search">Hledat místo</label><input id="place-search" type="search" placeholder="Hledat budovu nebo místo" autocomplete="off" /></div>
+      <div class="topbar-search" id="header-search"><label class="visually-hidden" for="place-search">Search for a place</label><input id="place-search" type="search" placeholder="Search for a building or place" autocomplete="off" /></div>
       <a class="topbar-brand" href="#" aria-label="Paměť Prahy — zpět na mapu"><span class="brand-name">PAMĚŤ PRAHY</span></a>
       <nav class="topbar-nav" id="header-menu" aria-label="Hlavní navigace">
         <button class="mobile-search-toggle nav-search-toggle" type="button" aria-controls="header-search" aria-expanded="false">Search</button>
@@ -47,9 +48,9 @@
       <section class="timeline" aria-label="Procházet časovou osu">
         <button class="detail-back" id="detail-back" type="button" hidden aria-label="Back to the map"><span class="detail-back-label">Back to the map</span><span class="detail-back-short" aria-hidden="true">Back</span></button>
         <div class="timeline-controls">
-          <button class="round-button" id="month-back" aria-label="Předchozí datum"></button>
+          <button class="round-button" id="month-back" aria-label="Previous year"></button>
           <div class="month-viewport" id="month-viewport"><div class="month-track" id="month-track" role="list"></div></div>
-          <button class="round-button" id="month-forward" aria-label="Následující datum"></button>
+          <button class="round-button" id="month-forward" aria-label="Next year"></button>
           <div class="active-month" id="active-month" aria-live="polite">2029</div>
           <span class="timeline-pointer" aria-hidden="true"></span>
         </div>
@@ -64,6 +65,6 @@
     <div class="photo-lightbox" id="photo-lightbox" hidden role="dialog" aria-modal="true" aria-label="Fotografie přes celou obrazovku"><button class="photo-lightbox-close" id="photo-lightbox-close" type="button" aria-label="Zavřít fotografii"></button><button class="photo-lightbox-nav photo-lightbox-prev" id="photo-lightbox-prev" type="button" aria-label="Předchozí fotografie"></button><img id="photo-lightbox-image" alt="" /><button class="photo-lightbox-nav photo-lightbox-next" id="photo-lightbox-next" type="button" aria-label="Následující fotografie"></button></div>
     <div class="info-backdrop" id="info-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="info-title"><section class="info-panel"><button id="info-close" class="info-close" type="button" aria-label="Zavřít">×</button><h2 id="info-title"></h2><p>Informace připravujeme.</p></section></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./app.js?v=26"></script>
+    <script src="./app.js?v=42"></script>
   </body>
 </html>
