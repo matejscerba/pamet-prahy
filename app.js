@@ -905,7 +905,7 @@ function applyArticleLanguage() {
   document.documentElement.lang = articleLanguage;
   $('#news-view').lang = articleLanguage;
   $('#news-article-dialog').lang = articleLanguage;
-  document.querySelector('[data-city-view="news"]').textContent = articleUI('journal');
+  document.querySelector('[data-city-view="news"]').textContent = 'JOURNAL';
   document.querySelector('[data-city-view="archive"]').textContent = articleUI('archive');
   $('.nav-search-toggle').textContent = articleUI('search');
   $('#place-search').placeholder = articleUI('placeholder');
