@@ -979,3 +979,21 @@ body:has(.place-detail:not([hidden])) {
 .news-article-gallery figcaption, .news-article-sources p { color: #777; }
 .news-article-sources { border-color: #c9c9c7; }
 .news-article-sources a { color: #555; }
+
+/* Keep the city menu interactive while reading a story. */
+.topbar { z-index: 1100; }
+.news-article-dialog { top: 61px; height: calc(100dvh - 61px); z-index: 1000; }
+.news-article-close { top: 79px; }
+.article-language-switch { display: flex; align-items: center; gap: 5px; margin-right: 14px; color: #aaa; font: 10px/1 Arial,Helvetica,sans-serif; }
+.article-language-switch button { padding: 8px 2px; min-height: 36px; border: 0; background: transparent; color: #aaa; font: inherit; cursor: pointer; }
+.article-language-switch button[aria-pressed="true"] { color: #333; }
+.article-language-switch button:focus-visible { outline-color: #626262; }
+.article-language-switch [hidden] { display: none; }
+@media (max-width: 800px) {
+  .news-article-dialog { top: 88px; height: calc(100dvh - 88px); }
+  .news-article-close { top: 98px; }
+  .article-language-switch { margin-right: 12px; font-size: 9px; }
+}
+@media (max-width: 480px) {
+  .timeline-arrow-label { max-width: 70px; white-space: normal; text-align: center; line-height: 1.25; }
+}
