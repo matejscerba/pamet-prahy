@@ -967,3 +967,15 @@ body:has(.place-detail:not([hidden])) {
 
 /* Release the entrance transform so the close cross stays fixed during scrolling. */
 .news-article-dialog[open] { animation-fill-mode: backwards; }
+
+/* Light reading surfaces for the journal and each full-page story. */
+.city-news, .news-article-dialog { background: #e9e9e7; color: #353535; }
+.news-article-dialog::backdrop, .news-article-close { background: #e9e9e7; }
+.news-article-close { color: #444; }
+.city-news .news-eyebrow, .news-article-body .news-eyebrow { color: #777; }
+.news-summary, .news-article-body .news-article-intro { color: #626262; }
+.news-read-more { color: #444; }
+.news-image, .news-article-image, .news-article-gallery img { background: #d7d7d5; }
+.news-article-gallery figcaption, .news-article-sources p { color: #777; }
+.news-article-sources { border-color: #c9c9c7; }
+.news-article-sources a { color: #555; }
