@@ -1,3 +1,22 @@
+const localArticleLanguage = window.archiveCity?.lang === 'ca' ? 'es' : (window.archiveCity?.lang || 'cs');
+const articleLanguageStorageKey = `journal-language-${new URLSearchParams(location.search).get('city') || 'prague'}`;
+let articleLanguage = localArticleLanguage;
+try { const saved = localStorage.getItem(articleLanguageStorageKey); if (saved === 'en' || saved === localArticleLanguage) articleLanguage = saved; } catch {}
+let activeNewsArticleIndex = null;
+let newsArticleTrigger = null;
+const articleUIKeys = ['journal','archive','search','placeholder','read','close','articles','noResults','example','further','previous','next','back'];
+function articleUI(key) {
+  const i = articleUIKeys.indexOf(key);
+  return (window.articleLocalization[articleLanguage] || window.articleLocalization.en).ui[i];
+}
+function localizedNewsArticle(article) {
+  const copy = window.articleLocalization[articleLanguage]?.articles[article.key];
+  const localized = copy ? {...article,category:copy[0],title:copy[1],summary:copy[2],paragraphs:copy.slice(3)} : {...article};
+  if (articleLanguage === 'cs' && article.key === 'bridge') localized.sources = article.sources.map((source,index)=>({...source,title:['ČVUT · Debata o budoucnosti mostu, 19. června 2026','Správa železnic · Provizorní zpevnění, září 2026'][index]}));
+  return localized;
+}
+function isJournalHash() { return !location.hash || ['#news','#journal'].includes(location.hash); }
+
 const photoHistory = (slug, years, label) => years.map((year) => {
   const count = year.count;
   const photos = Array.from({ length: count }, (_, index) => ({
@@ -148,7 +167,7 @@ function icon(name) {
   return icons[name];
 }
 function monthDate(key) { const [year, month] = key.split("-").map(Number); return new Date(Date.UTC(year, month - 1, 1)); }
-function fullMonth(key) { const d = monthDate(key); return new Intl.DateTimeFormat(window.archiveCity?.lang || "cs", { month: "long", year: "numeric", timeZone: "UTC" }).format(d); }
+function fullMonth(key) { const d = monthDate(key); return new Intl.DateTimeFormat(articleLanguage, { month: "long", year: "numeric", timeZone: "UTC" }).format(d); }
 function monthIndex(key) { return months.indexOf(key); }
 function selectedPlace() { return places.find((place) => place.id === state.placeId) || null; }
 function detailPlace() { return places.find((place) => place.id === state.detailPlaceId) || null; }
@@ -671,6 +690,7 @@ $("#photo-lightbox-prev").addEventListener("click", () => moveLightboxPhoto(-1))
 $("#photo-lightbox-next").addEventListener("click", () => moveLightboxPhoto(1));
 $("#photo-lightbox").addEventListener("click", (event) => { if (event.target === $("#photo-lightbox")) closePhoto(); });
 document.addEventListener("keydown", (event) => {
+  if (event.key === 'Escape' && $('#news-article-dialog').open) { $('#news-article-dialog').close(); return; }
   if (!$("#photo-lightbox").hidden && (event.key === "ArrowLeft" || event.key === "ArrowRight")) { event.preventDefault(); moveLightboxPhoto(event.key === "ArrowLeft" ? -1 : 1); return; }
   if (event.key === "Escape" && !$("#photo-lightbox").hidden) closePhoto();
   else if (event.key === "Escape" && state.detailPlaceId) closeDetail();
@@ -722,7 +742,7 @@ header.addEventListener("keydown", (event) => {
 // A city journal sits alongside the photographic map archive.
 const cityNewsArticles = [
   {
-    pragueOnly: true, example: false,
+    key: 'intro', pragueOnly: true, example: false,
     category: 'Introducing the project', title: 'Introducing Paměť Prahy',
     summary: 'A photographic memory of Prague, made on film and preserved for the years ahead.',
     image: './public/images/news/project-introduction.png',
@@ -735,7 +755,7 @@ const cityNewsArticles = [
     ]
   },
   {
-    pragueOnly: true, example: false,
+    key: 'bridge', pragueOnly: true, example: false,
     category: 'Prague in transition · 2026', title: 'Železniční most: a future still unwritten',
     summary: 'Nine photographs from 2026 record the bridge as it is, while the debate over its future continues.',
     image: './public/images/places/zeleznicni-most/2026/01.jpg',
@@ -754,7 +774,7 @@ const cityNewsArticles = [
     ]
   },
   {
-    otherCitiesOnly: true, category: 'Field notes', title: 'A city, one frame at a time',
+    key: 'field', otherCitiesOnly: true, category: 'Field notes', title: 'A city, one frame at a time',
     summary: 'Looking closely at the streets we pass every day—and the small changes that make them different.',
     paragraphs: [
       'A city rarely changes all at once. A shop window is replaced, a tree grows above a roofline, a familiar corner catches the light differently. Photography gives these ordinary details a place in our collective memory.',
@@ -763,7 +783,7 @@ const cityNewsArticles = [
     ]
   },
   {
-    alt: 'Gloved hands caring for physical photographic records.', category: 'Inside the archive', title: 'The life of a negative',
+    key: 'negative', alt: 'Gloved hands caring for physical photographic records.', category: 'Inside the archive', title: 'The life of a negative',
     summary: 'Why making a photograph is only the beginning of preserving it.',
     image: './public/images/mission/analog-archive.png',
     paragraphs: [
@@ -773,7 +793,7 @@ const cityNewsArticles = [
     ]
   },
   {
-    category: 'Ways of looking', title: 'Return to the same street',
+    key: 'street', category: 'Ways of looking', title: 'Return to the same street',
     summary: 'A simple practice for noticing time: find a viewpoint, make a photograph, come back.',
     paragraphs: [
       'Choose a place you know well. Look for a viewpoint that can be found again: a doorway, the edge of a square, a crossing. Make a photograph and note where you stood.',
@@ -791,12 +811,13 @@ function renderCityNews() {
     article.image ||= localImages[index === 2 ? Math.min(2, localImages.length - 1) : 0]?.src || './public/images/mission/analog-archive.png';
     article.alt ||= `A photographic record from ${cityTitle}.`;
   });
-  root.innerHTML = `<div class="news-grid">${cityNewsArticles.map((article,index) => `<article class="news-card ${index === 0 ? 'news-card-featured' : ''}"><button class="news-story" type="button" data-news-article="${index}" aria-label="Read ${archiveEscape(article.title)}"><div class="news-image"><img src="${archiveEscape(article.image)}" alt="${archiveEscape(article.alt)}" loading="lazy" /></div><div class="news-card-copy"><p class="news-eyebrow">${article.category}</p><h2>${article.title}</h2><p class="news-summary">${article.summary}</p><span class="news-read-more">Read article <span aria-hidden="true">→</span></span></div></button></article>`).join('')}</div>`;
+  root.innerHTML = `<div class="news-grid">${cityNewsArticles.map(localizedNewsArticle).map((article,index) => `<article class="news-card ${index === 0 ? 'news-card-featured' : ''}"><button class="news-story" type="button" data-news-article="${index}" aria-label="${articleUI('read')}: ${archiveEscape(article.title)}"><div class="news-image"><img src="${archiveEscape(article.image)}" alt="${archiveEscape(article.alt)}" loading="lazy" /></div><div class="news-card-copy"><p class="news-eyebrow">${article.category}</p><h2>${article.title}</h2><p class="news-summary">${article.summary}</p><span class="news-read-more">${articleUI('read')} <span aria-hidden="true">→</span></span></div></button></article>`).join('')}</div>`;
   prepareImages(root);
   root.querySelectorAll('[data-news-article]').forEach(button => button.addEventListener('click', () => openNewsArticle(Number(button.dataset.newsArticle))));
 }
 let citySectionRequest = 0;
 async function setCitySection(section, updateUrl = true) {
+  if ($('#news-article-dialog').open) $('#news-article-dialog').close();
   const request = ++citySectionRequest;
   const news = section === 'news';
   if (news) {
@@ -828,38 +849,41 @@ async function setCitySection(section, updateUrl = true) {
     journal.classList.add('is-entering');
   }
   else { renderMonthTrack(false); state.map?.invalidateSize(); if (!state.detailPlaceId) { renderPlaces(true); updateMarkerStyles(true); } }
-  if (updateUrl) history.replaceState(null, '', news ? '#news' : state.detailPlaceId ? `#place/${state.detailPlaceId}` : '#archive');
+  if (updateUrl) history.replaceState(null, '', news ? '#journal' : state.detailPlaceId ? `#place/${state.detailPlaceId}` : '#archive');
 }
 document.querySelectorAll('[data-city-view]').forEach(button => button.addEventListener('click', () => {
+  if ($('#news-article-dialog').open) $('#news-article-dialog').close();
   if (button.getAttribute('aria-pressed') !== 'true') setCitySection(button.dataset.cityView);
 }));
 $('#news-article-dialog').querySelector('.news-article-close').addEventListener('click',()=>$('#news-article-dialog').close());
 $('#news-article-dialog').addEventListener('click',event=>{ if(event.target !== event.currentTarget)return; const box=event.currentTarget.getBoundingClientRect(); if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)event.currentTarget.close(); });
-window.addEventListener('hashchange',()=>setCitySection(!location.hash || location.hash==='#news'?'news':'archive',false));
-if (!location.hash || location.hash === '#news') setCitySection('news',false);
+window.addEventListener('hashchange',()=>setCitySection(isJournalHash()?'news':'archive',false));
+if (isJournalHash()) setCitySection('news',false);
 
 function openNewsArticle(index) {
   renderCityNews();
-  const article = cityNewsArticles[index];
+  const article = localizedNewsArticle(cityNewsArticles[index]);
   if (!article) return;
   const dialog = $('#news-article-dialog');
-  dialog.querySelector('.news-article-body').innerHTML = `<p class="news-eyebrow">${article.category}${article.example === false ? '' : ' · Example article'}</p><h1 id="news-article-title">${article.title}</h1><p class="news-article-intro">${article.summary}</p><img class="news-article-image" src="${archiveEscape(article.image)}" alt="${archiveEscape(article.alt)}" />${article.paragraphs.map(paragraph=>`<p>${paragraph}</p>`).join('')}`;
+  dialog.querySelector('.news-article-body').innerHTML = `<p class="news-eyebrow">${article.category}${article.example === false ? '' : ` · ${articleUI('example')}`}</p><h1 id="news-article-title">${article.title}</h1><p class="news-article-intro">${article.summary}</p><img class="news-article-image" src="${archiveEscape(article.image)}" alt="${archiveEscape(article.alt)}" />${article.paragraphs.map(paragraph=>`<p>${paragraph}</p>`).join('')}`;
 if (article.gallery?.length) {
   dialog.querySelector('.news-article-body').insertAdjacentHTML('beforeend', `<div class="news-article-gallery">${article.gallery.map(photo=>`<figure><img src="${archiveEscape(photo.src)}" alt="${archiveEscape(photo.alt)}" loading="lazy" /><figcaption>${photo.caption}</figcaption></figure>`).join('')}</div>`);
 }
 if (article.sources?.length) {
-  dialog.querySelector('.news-article-body').insertAdjacentHTML('beforeend', `<footer class="news-article-sources"><p>Further reading</p>${article.sources.map(source=>`<a href="${archiveEscape(source.url)}" target="_blank" rel="noreferrer">${source.title} ↗</a>`).join('')}</footer>`);
+  dialog.querySelector('.news-article-body').insertAdjacentHTML('beforeend', `<footer class="news-article-sources"><p>${articleUI('further')}</p>${article.sources.map(source=>`<a href="${archiveEscape(source.url)}" target="_blank" rel="noreferrer">${source.title} ↗</a>`).join('')}</footer>`);
 }
-if (!dialog.open) dialog.showModal();
+if (!dialog.open) { newsArticleTrigger = document.activeElement; dialog.show(); }
+  activeNewsArticleIndex = index;
+  $('#news-view').inert = true;
   dialog.scrollTop = 0; prepareImages(dialog);
 }
 function renderSiteSearch() {
   const results = $('#site-search-results');
   const query = normalizeText($('#place-search').value.trim());
   if (!query) { results.hidden = true; results.replaceChildren(); return; }
-  const articles = cityNewsArticles.map((article,index)=>({article,index})).filter(({article})=>normalizeText([article.title,article.summary,article.category,...article.paragraphs].join(' ')).includes(query));
+  const articles = cityNewsArticles.map((article,index)=>({article:localizedNewsArticle(article),index})).filter(({article})=>normalizeText([article.title,article.summary,article.category,...article.paragraphs].join(' ')).includes(query));
   const matches = filteredPlaces();
-  results.innerHTML = `${articles.length ? `<section><h3>Articles</h3>${articles.map(({article,index})=>`<button type="button" data-search-article="${index}"><span>${archiveEscape(article.title)}</span><span aria-hidden="true">→</span></button>`).join('')}</section>` : ''}${matches.length ? `<section><h3>Archive</h3>${matches.map(place=>`<button type="button" data-search-place="${archiveEscape(place.id)}"><span>${archiveEscape(place.name)}</span><span aria-hidden="true">→</span></button>`).join('')}</section>` : ''}${!articles.length && !matches.length ? '<p class="search-no-results">No places or articles match your search.</p>' : ''}`;
+  results.innerHTML = `${articles.length ? `<section><h3>${articleUI('articles')}</h3>${articles.map(({article,index})=>`<button type="button" data-search-article="${index}"><span>${archiveEscape(article.title)}</span><span aria-hidden="true">→</span></button>`).join('')}</section>` : ''}${matches.length ? `<section><h3>${articleUI('archive')}</h3>${matches.map(place=>`<button type="button" data-search-place="${archiveEscape(place.id)}"><span>${archiveEscape(place.name)}</span><span aria-hidden="true">→</span></button>`).join('')}</section>` : ''}${!articles.length && !matches.length ? `<p class="search-no-results">${articleUI('noResults')}</p>` : ''}`;
   results.hidden = false;
   const finishSearch = () => { state.query = ''; $('#place-search').value = ''; setHeaderPanel(''); };
   results.querySelectorAll('[data-search-article]').forEach(button=>button.addEventListener('click',async()=>{
@@ -869,3 +893,47 @@ function renderSiteSearch() {
     const id=button.dataset.searchPlace; finishSearch(); await setCitySection('archive'); selectPlace(id,{pan:true});
   }));
 }
+
+$('#news-article-dialog').addEventListener('close',()=>{
+  const index = activeNewsArticleIndex;
+  activeNewsArticleIndex = null;
+  $('#news-view').inert = false;
+  if (newsArticleTrigger?.isConnected) newsArticleTrigger.focus();
+  else if (index !== null) $('#news-view').querySelector(`[data-news-article="${index}"]`)?.focus();
+});
+function applyArticleLanguage() {
+  document.documentElement.lang = articleLanguage;
+  $('#news-view').lang = articleLanguage;
+  $('#news-article-dialog').lang = articleLanguage;
+  document.querySelector('[data-city-view="news"]').textContent = articleUI('journal');
+  document.querySelector('[data-city-view="archive"]').textContent = articleUI('archive');
+  $('.nav-search-toggle').textContent = articleUI('search');
+  $('#place-search').placeholder = articleUI('placeholder');
+  document.querySelector('label[for="place-search"]').textContent = articleUI('placeholder');
+  $('.news-article-close').setAttribute('aria-label',articleUI('close'));
+  const labels = {cs:'CZ',de:'DE',hu:'HU',pl:'PL',en:'EN',fr:'FR',nl:'NL',ga:'IE',da:'DK',sv:'SE',nb:'NO',fi:'FI',is:'IS',it:'IT',es:'ES',pt:'PT',el:'GR'};
+  const names = {cs:'Čeština',de:'Deutsch',hu:'Magyar',pl:'Polski',en:'English',fr:'Français',nl:'Nederlands',ga:'Gaeilge',da:'Dansk',sv:'Svenska',nb:'Norsk',fi:'Suomi',is:'Íslenska',it:'Italiano',es:'Español',pt:'Português',el:'Ελληνικά'};
+  const localButton = document.querySelector('[data-article-language="local"]');
+  localButton.textContent = labels[localArticleLanguage];
+  localButton.setAttribute('aria-label',names[localArticleLanguage]);
+  document.querySelector('[data-article-language="en"]').setAttribute('aria-label','English');
+  localButton.hidden = localArticleLanguage === 'en';
+  document.querySelector('.article-language-switch > span').hidden = localArticleLanguage === 'en';
+  document.querySelectorAll('[data-article-language]').forEach(button=>button.setAttribute('aria-pressed',String((button.dataset.articleLanguage==='en'?'en':localArticleLanguage)===articleLanguage)));
+  $('#month-back').setAttribute('aria-label',articleUI('previous'));
+  $('#month-forward').setAttribute('aria-label',articleUI('next'));
+  $('#month-back .timeline-arrow-label').textContent = articleUI('previous');
+  $('#month-forward .timeline-arrow-label').textContent = articleUI('next');
+  const articleIndex = activeNewsArticleIndex;
+  if ($('#news-view').children.length) { $('#news-view').replaceChildren(); renderCityNews(); }
+  if (articleIndex !== null && $('#news-article-dialog').open) openNewsArticle(articleIndex);
+  if (!$('#archive-view').hidden) renderMonthTrack(false);
+  if ($('.topbar').dataset.panel === 'search') renderSiteSearch();
+}
+document.querySelectorAll('[data-article-language]').forEach(button=>button.addEventListener('click',()=>{
+  articleLanguage = button.dataset.articleLanguage === 'en' ? 'en' : localArticleLanguage;
+  try { localStorage.setItem(articleLanguageStorageKey,articleLanguage); } catch {}
+  applyArticleLanguage();
+}));
+applyArticleLanguage();
+document.addEventListener('DOMContentLoaded',applyArticleLanguage,{once:true});
