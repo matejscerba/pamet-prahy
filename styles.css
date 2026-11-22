@@ -964,3 +964,6 @@ body:has(.place-detail:not([hidden])) {
   .news-article-close { top: 10px; right: 10px; }
   .news-article-body .news-article-image { margin: 30px 0; }
 }
+
+/* Release the entrance transform so the close cross stays fixed during scrolling. */
+.news-article-dialog[open] { animation-fill-mode: backwards; }
