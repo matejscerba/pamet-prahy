@@ -912,3 +912,5 @@ body:has(.place-detail:not([hidden])) {
   .news-card-featured .news-card-copy { padding: 24px 0 0; }
   .news-article-body h1 { font-size: 21px; }
 }
+
+.city-view-switch button { font-family: var(--mono); letter-spacing: .03em; }

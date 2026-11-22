@@ -467,7 +467,7 @@ async function renderArchiveEvent(place, animate = false) {
   setupPhotoViewer(stage);
 }
 function syncHash() {
-  const next = state.detailPlaceId ? `#place/${state.detailPlaceId}` : "#";
+  const next = state.detailPlaceId ? `#place/${state.detailPlaceId}` : "#archive";
   if (location.hash !== next) history.replaceState(null, "", next);
 }
 let archiveLoadingProgress = null;
@@ -766,20 +766,39 @@ function renderCityNews() {
     dialog.showModal(); dialog.scrollTop = 0; prepareImages(dialog);
   }));
 }
-function setCitySection(section, updateUrl = true) {
+let citySectionRequest = 0;
+async function setCitySection(section, updateUrl = true) {
+  const request = ++citySectionRequest;
   const news = section === 'news';
+  if (news) {
+    document.documentElement.classList.remove('city-entering');
+    $('.topbar').inert = false;
+    $('#news-view').inert = false;
+  } else if (!$('#news-view').hidden) {
+    document.documentElement.classList.add('city-entering');
+    $('.topbar').inert = true;
+    $('#news-view').inert = true;
+    await Promise.all([
+      new Promise(resolve => window.setTimeout(resolve, 2000)),
+      Promise.all(places.map(place => (eventsForMonth(place,state.month) || latestEventForMonth(place,state.month) || place.history[0])?.photos[0]?.src).filter(Boolean).map(preloadPhoto)),
+    ]);
+    if (request !== citySectionRequest) return;
+    document.documentElement.classList.remove('city-entering');
+    $('.topbar').inert = false;
+    $('#news-view').inert = false;
+  }
   if (news && state.detailPlaceId) closeDetail({updateUrl:false});
   $('#archive-view').hidden = news;
   $('#news-view').hidden = !news;
   document.querySelectorAll('[data-city-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.cityView === (news ? 'news' : 'archive'))));
   if (news) renderCityNews();
   else { state.map?.invalidateSize(); if (!state.detailPlaceId) { renderPlaces(true); updateMarkerStyles(true); } }
-  if (updateUrl) history.replaceState(null, '', news ? '#news' : state.detailPlaceId ? `#place/${state.detailPlaceId}` : '#');
+  if (updateUrl) history.replaceState(null, '', news ? '#news' : state.detailPlaceId ? `#place/${state.detailPlaceId}` : '#archive');
 }
 document.querySelectorAll('[data-city-view]').forEach(button => button.addEventListener('click', () => {
   if (button.getAttribute('aria-pressed') !== 'true') setCitySection(button.dataset.cityView);
 }));
 $('#news-article-dialog').querySelector('.news-article-close').addEventListener('click',()=>$('#news-article-dialog').close());
 $('#news-article-dialog').addEventListener('click',event=>{ if(event.target !== event.currentTarget)return; const box=event.currentTarget.getBoundingClientRect(); if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)event.currentTarget.close(); });
-window.addEventListener('hashchange',()=>setCitySection(location.hash==='#news'?'news':'archive',false));
-if (location.hash === '#news') setCitySection('news',false);
+window.addEventListener('hashchange',()=>setCitySection(!location.hash || location.hash==='#news'?'news':'archive',false));
+if (!location.hash || location.hash === '#news') setCitySection('news',false);
