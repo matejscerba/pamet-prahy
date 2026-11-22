@@ -676,8 +676,8 @@ document.addEventListener("keydown", (event) => {
   else if (event.key === "Escape" && state.detailPlaceId) closeDetail();
   if (!$("#archive-view").hidden && (event.key === "ArrowLeft" || event.key === "ArrowRight") && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) nudgeMonth(event.key === "ArrowLeft" ? -1 : 1);
 });
-$("#place-search").addEventListener("input", (event) => { state.query = event.target.value; renderPlaces(); updateMarkerStyles(); });
-$("#place-search").addEventListener("keydown", (event) => { if (event.key === "Enter") { const place = filteredPlaces()[0]; if (place) selectPlace(place.id, { pan: true }); } });
+$("#place-search").addEventListener("input", (event) => { state.query = event.target.value; renderPlaces(); updateMarkerStyles(); renderSiteSearch(); });
+$("#place-search").addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); $("#site-search-results").querySelector("button")?.click(); } else if (event.key === "Escape") setHeaderPanel(""); });
 document.querySelectorAll("[data-info]").forEach((button) => button.addEventListener("click", () => { $("#info-title").textContent = button.dataset.info; $("#info-dialog").hidden = false; requestAnimationFrame(() => $("#info-dialog").classList.add("is-open")); }));
 $("#info-close").addEventListener("click", () => { $("#info-dialog").classList.remove("is-open"); setTimeout(() => { $("#info-dialog").hidden = true; }, 180); });
 window.addEventListener("hashchange", () => { const id = location.hash.startsWith("#place/") ? location.hash.slice(7) : null; if (id && id !== state.detailPlaceId) openDetail(id, { updateUrl: false }); else if (!id && state.detailPlaceId) closeDetail({ updateUrl: false }); });
@@ -693,7 +693,7 @@ const searchToggle = $(".mobile-search-toggle");
 const menuToggle = $(".mobile-menu-toggle");
 
 function setHeaderPanel(panel) {
-  header.dataset.panel = panel;
+  header.dataset.panel = panel; if (panel !== "search") $("#site-search-results").hidden = true;
   searchToggle.setAttribute("aria-expanded", String(panel === "search"));
   menuToggle?.setAttribute("aria-expanded", String(panel === "menu"));
 }
@@ -701,7 +701,7 @@ function setHeaderPanel(panel) {
 searchToggle.addEventListener("click", () => {
   const opening = header.dataset.panel !== "search";
   setHeaderPanel(opening ? "search" : "");
-  if (opening) { setCitySection("archive"); $("#place-search").focus(); }
+  if (opening) { renderSiteSearch(); $("#place-search").focus(); }
 });
 menuToggle?.addEventListener("click", () => {
   setHeaderPanel(header.dataset.panel === "menu" ? "" : "menu");
@@ -761,23 +761,18 @@ function renderCityNews() {
   });
   root.innerHTML = `<div class="news-grid">${cityNewsArticles.map((article,index) => `<article class="news-card ${index === 0 ? 'news-card-featured' : ''}"><button class="news-story" type="button" data-news-article="${index}" aria-label="Read ${archiveEscape(article.title)}"><div class="news-image"><img src="${archiveEscape(article.image)}" alt="${archiveEscape(article.alt)}" loading="lazy" /></div><div class="news-card-copy"><p class="news-eyebrow">${article.category}</p><h2>${article.title}</h2><p class="news-summary">${article.summary}</p><span class="news-read-more">Read article <span aria-hidden="true">→</span></span></div></button></article>`).join('')}</div>`;
   prepareImages(root);
-  root.querySelectorAll('[data-news-article]').forEach(button => button.addEventListener('click', () => {
-    const article = cityNewsArticles[Number(button.dataset.newsArticle)];
-    const dialog = $('#news-article-dialog');
-    dialog.querySelector('.news-article-body').innerHTML = `<p class="news-eyebrow">${article.category} · Example article</p><h1 id="news-article-title">${article.title}</h1><p class="news-article-intro">${article.summary}</p><img class="news-article-image" src="${archiveEscape(article.image)}" alt="${archiveEscape(article.alt)}" />${article.paragraphs.map(paragraph=>`<p>${paragraph}</p>`).join('')}`;
-    dialog.showModal(); dialog.scrollTop = 0; prepareImages(dialog);
-  }));
+  root.querySelectorAll('[data-news-article]').forEach(button => button.addEventListener('click', () => openNewsArticle(Number(button.dataset.newsArticle))));
 }
 let citySectionRequest = 0;
 async function setCitySection(section, updateUrl = true) {
   const request = ++citySectionRequest;
   const news = section === 'news';
   if (news) {
-    document.documentElement.classList.remove('city-entering');
+    document.documentElement.classList.remove('city-entering', 'archive-entering');
     $('.topbar').inert = false;
     $('#news-view').inert = false;
   } else if (!$('#news-view').hidden) {
-    document.documentElement.classList.add('city-entering');
+    document.documentElement.classList.add('city-entering', 'archive-entering');
     $('.topbar').inert = true;
     $('#news-view').inert = true;
     await Promise.all([
@@ -785,7 +780,7 @@ async function setCitySection(section, updateUrl = true) {
       Promise.all(places.map(place => (eventsForMonth(place,state.month) || latestEventForMonth(place,state.month) || place.history[0])?.photos[0]?.src).filter(Boolean).map(preloadPhoto)),
     ]);
     if (request !== citySectionRequest) return;
-    document.documentElement.classList.remove('city-entering');
+    document.documentElement.classList.remove('city-entering', 'archive-entering');
     $('.topbar').inert = false;
     $('#news-view').inert = false;
   }
@@ -793,7 +788,13 @@ async function setCitySection(section, updateUrl = true) {
   $('#archive-view').hidden = news;
   $('#news-view').hidden = !news;
   document.querySelectorAll('[data-city-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.cityView === (news ? 'news' : 'archive'))));
-  if (news) renderCityNews();
+  if (news) {
+    renderCityNews();
+    const journal = $('#news-view');
+    journal.classList.remove('is-entering');
+    void journal.offsetWidth;
+    journal.classList.add('is-entering');
+  }
   else { renderMonthTrack(false); state.map?.invalidateSize(); if (!state.detailPlaceId) { renderPlaces(true); updateMarkerStyles(true); } }
   if (updateUrl) history.replaceState(null, '', news ? '#news' : state.detailPlaceId ? `#place/${state.detailPlaceId}` : '#archive');
 }
@@ -804,3 +805,29 @@ $('#news-article-dialog').querySelector('.news-article-close').addEventListener(
 $('#news-article-dialog').addEventListener('click',event=>{ if(event.target !== event.currentTarget)return; const box=event.currentTarget.getBoundingClientRect(); if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)event.currentTarget.close(); });
 window.addEventListener('hashchange',()=>setCitySection(!location.hash || location.hash==='#news'?'news':'archive',false));
 if (!location.hash || location.hash === '#news') setCitySection('news',false);
+
+function openNewsArticle(index) {
+  renderCityNews();
+  const article = cityNewsArticles[index];
+  if (!article) return;
+  const dialog = $('#news-article-dialog');
+  dialog.querySelector('.news-article-body').innerHTML = `<p class="news-eyebrow">${article.category} · Example article</p><h1 id="news-article-title">${article.title}</h1><p class="news-article-intro">${article.summary}</p><img class="news-article-image" src="${archiveEscape(article.image)}" alt="${archiveEscape(article.alt)}" />${article.paragraphs.map(paragraph=>`<p>${paragraph}</p>`).join('')}`;
+  if (!dialog.open) dialog.showModal();
+  dialog.scrollTop = 0; prepareImages(dialog);
+}
+function renderSiteSearch() {
+  const results = $('#site-search-results');
+  const query = normalizeText($('#place-search').value.trim());
+  if (!query) { results.hidden = true; results.replaceChildren(); return; }
+  const articles = cityNewsArticles.map((article,index)=>({article,index})).filter(({article})=>normalizeText([article.title,article.summary,article.category,...article.paragraphs].join(' ')).includes(query));
+  const matches = filteredPlaces();
+  results.innerHTML = `${articles.length ? `<section><h3>Articles</h3>${articles.map(({article,index})=>`<button type="button" data-search-article="${index}"><span>${archiveEscape(article.title)}</span><span aria-hidden="true">→</span></button>`).join('')}</section>` : ''}${matches.length ? `<section><h3>Archive</h3>${matches.map(place=>`<button type="button" data-search-place="${archiveEscape(place.id)}"><span>${archiveEscape(place.name)}</span><span aria-hidden="true">→</span></button>`).join('')}</section>` : ''}${!articles.length && !matches.length ? '<p class="search-no-results">No places or articles match your search.</p>' : ''}`;
+  results.hidden = false;
+  const finishSearch = () => { state.query = ''; $('#place-search').value = ''; setHeaderPanel(''); };
+  results.querySelectorAll('[data-search-article]').forEach(button=>button.addEventListener('click',async()=>{
+    const index=Number(button.dataset.searchArticle); finishSearch(); await setCitySection('news'); openNewsArticle(index);
+  }));
+  results.querySelectorAll('[data-search-place]').forEach(button=>button.addEventListener('click',async()=>{
+    const id=button.dataset.searchPlace; finishSearch(); await setCitySection('archive'); selectPlace(id,{pan:true});
+  }));
+}
