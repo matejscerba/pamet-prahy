@@ -933,3 +933,17 @@ body:has(.place-detail:not([hidden])) {
 .city-news.is-entering .news-card:nth-child(2) { animation-delay: .1s; }
 .city-news.is-entering .news-card:nth-child(3) { animation-delay: .2s; }
 @media (prefers-reduced-motion: reduce) { .city-news.is-entering .news-card { animation: none; } }
+
+.news-image:has(img[src$="project-introduction.png"]) { aspect-ratio: 4/5; }
+.news-image img[src$="project-introduction.png"] { object-position: center 35%; filter: none; }
+.news-article-image[src$="project-introduction.png"] { height: auto; aspect-ratio: auto; }
+.news-article-image[src*="zeleznicni-most/2026"] { aspect-ratio: 1; }
+.news-article-gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 14px; margin: 36px 0; }
+.news-article-gallery figure { margin: 0; }
+.news-article-gallery img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: #171717; }
+.news-article-gallery figcaption { margin-top: 8px; font: 9px/1.6 Arial,Helvetica,sans-serif; color: #999; }
+.news-article-sources { padding-top: 24px; margin-top: 32px; border-top: 1px solid #444; font: 10px/1.7 Arial,Helvetica,sans-serif; }
+.news-article-sources p { margin: 0 0 10px; color: #999; }
+.news-article-sources a { display: block; margin: 8px 0; color: #bbb; text-decoration: none; }
+.news-article-sources a:hover { text-decoration: underline; }
+.city-news.is-entering .news-card:nth-child(4) { animation-delay: .3s; }
