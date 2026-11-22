@@ -30,7 +30,8 @@
     <link rel="preconnect" href="https://gs-pub.praha.eu" />
     <link rel="preconnect" href="https://tile.openstreetmap.org" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=54" />
+    <link rel="stylesheet" href="./styles.css?v=56" />
+  <link rel="preload" as="image" href="./public/images/mission/analog-archive.png" fetchpriority="low" />
 </head>
 <body>
   <div class="city-loading" role="status" aria-live="polite" aria-label="Načítání Prahy">
@@ -40,14 +41,18 @@
   </div>
 
     <header class="topbar" aria-label="Hlavička webu">
+      <div class="city-identity">
       <a class="archive-home" href="./" aria-label="World Analog Archive — výběr města"><img src="./city-logo.svg" width="44" height="44" alt="World Analog Archive" /></a>
+      <a class="topbar-brand" href="#" aria-label="Paměť Prahy — zpět na mapu"><span class="brand-name">Paměť Prahy</span></a>
+      </div>
       <div class="topbar-search" id="header-search"><label class="visually-hidden" for="place-search">Search for a place</label><input id="place-search" type="search" placeholder="Search for a building or place" autocomplete="off" /></div>
-      <a class="topbar-brand" href="#" aria-label="Paměť Prahy — zpět na mapu"><span class="brand-name">PAMĚŤ PRAHY</span></a>
+
+      <nav class="city-view-switch" aria-label="City sections"><button type="button" data-city-view="news" aria-pressed="false">News</button><button type="button" data-city-view="archive" aria-pressed="true">Archive</button></nav>
       <nav class="topbar-nav" id="header-menu" aria-label="Hlavní navigace">
         <button class="mobile-search-toggle nav-search-toggle" type="button" aria-controls="header-search" aria-expanded="false">Search</button>
       </nav>
     </header>
-    <main class="app-shell">
+    <main class="app-shell" id="archive-view">
       <section class="timeline" aria-label="Procházet časovou osu">
         <button class="detail-back" id="detail-back" type="button" hidden aria-label="Back to the map"><span class="detail-back-label">Back to the map</span><span class="detail-back-short" aria-hidden="true">Back</span></button>
         <div class="timeline-controls">
@@ -65,9 +70,11 @@
       </section>
       <section class="place-detail" id="place-detail" hidden aria-live="polite"></section>
     </main>
+    <main class="city-news" id="news-view" hidden aria-label="City news"></main>
+    <dialog class="news-article-dialog" id="news-article-dialog" aria-labelledby="news-article-title"><button class="news-article-close" type="button" aria-label="Close article">×</button><article class="news-article-body"></article></dialog>
     <div class="photo-lightbox" id="photo-lightbox" hidden role="dialog" aria-modal="true" aria-label="Fotografie přes celou obrazovku"><button class="photo-lightbox-close" id="photo-lightbox-close" type="button" aria-label="Zavřít fotografii"></button><button class="photo-lightbox-nav photo-lightbox-prev" id="photo-lightbox-prev" type="button" aria-label="Předchozí fotografie"></button><img id="photo-lightbox-image" alt="" /><button class="photo-lightbox-nav photo-lightbox-next" id="photo-lightbox-next" type="button" aria-label="Následující fotografie"></button></div>
     <div class="info-backdrop" id="info-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="info-title"><section class="info-panel"><button id="info-close" class="info-close" type="button" aria-label="Zavřít">×</button><h2 id="info-title"></h2><p>Informace připravujeme.</p></section></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./app.js?v=42"></script>
+    <script src="./app.js?v=43"></script>
   </body>
 </html>
