@@ -659,7 +659,7 @@ async function setupMap() {
 
 $("#month-back").innerHTML = '<span class="timeline-arrow" aria-hidden="true">←</span>' + '<span class="timeline-arrow-label">Previous year</span>'; $("#month-forward").innerHTML = '<span class="timeline-arrow" aria-hidden="true">→</span>' + '<span class="timeline-arrow-label">Next year</span>'; $("#map-home").innerHTML = icon("locate");
 $("#detail-back").addEventListener("click", closeDetail);
-$(".topbar-brand").addEventListener("click", (event) => { event.preventDefault(); returnToMap(); });
+$(".topbar-brand").addEventListener("click", (event) => { event.preventDefault(); setCitySection('archive'); returnToMap(); });
 $("#month-back").addEventListener("click", () => nudgeMonth(-1)); $("#month-forward").addEventListener("click", () => nudgeMonth(1));
 $("#map-home").addEventListener("click", () => { state.placeId = null; renderPlaces(); updateMarkerStyles(); state.map.flyTo(archiveCenter, 12, { duration: .65 }); });
 window.addEventListener("resize", () => { renderMonthTrack(false); state.map?.invalidateSize(); });
@@ -672,7 +672,7 @@ document.addEventListener("keydown", (event) => {
   if (!$("#photo-lightbox").hidden && (event.key === "ArrowLeft" || event.key === "ArrowRight")) { event.preventDefault(); moveLightboxPhoto(event.key === "ArrowLeft" ? -1 : 1); return; }
   if (event.key === "Escape" && !$("#photo-lightbox").hidden) closePhoto();
   else if (event.key === "Escape" && state.detailPlaceId) closeDetail();
-  if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) nudgeMonth(event.key === "ArrowLeft" ? -1 : 1);
+  if (!$("#archive-view").hidden && (event.key === "ArrowLeft" || event.key === "ArrowRight") && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) nudgeMonth(event.key === "ArrowLeft" ? -1 : 1);
 });
 $("#place-search").addEventListener("input", (event) => { state.query = event.target.value; renderPlaces(); updateMarkerStyles(); });
 $("#place-search").addEventListener("keydown", (event) => { if (event.key === "Enter") { const place = filteredPlaces()[0]; if (place) selectPlace(place.id, { pan: true }); } });
@@ -699,7 +699,7 @@ function setHeaderPanel(panel) {
 searchToggle.addEventListener("click", () => {
   const opening = header.dataset.panel !== "search";
   setHeaderPanel(opening ? "search" : "");
-  if (opening) $("#place-search").focus();
+  if (opening) { setCitySection("archive"); $("#place-search").focus(); }
 });
 menuToggle?.addEventListener("click", () => {
   setHeaderPanel(header.dataset.panel === "menu" ? "" : "menu");
@@ -716,3 +716,71 @@ header.addEventListener("keydown", (event) => {
   setHeaderPanel("");
   toggle?.focus();
 });
+
+// A city journal sits alongside the photographic map archive.
+const cityNewsArticles = [
+  {
+    category: 'Field notes', title: 'A city, one frame at a time',
+    summary: 'Looking closely at the streets we pass every day—and the small changes that make them different.',
+    paragraphs: [
+      'A city rarely changes all at once. A shop window is replaced, a tree grows above a roofline, a familiar corner catches the light differently. Photography gives these ordinary details a place in our collective memory.',
+      'Returning with a camera invites a slower kind of attention. The same viewpoint becomes a reference: not only for buildings, but for the way people use the spaces between them.',
+      'This journal will bring together observations from the streets, photographs from the archive and conversations about how we document the places we share.'
+    ]
+  },
+  {
+    category: 'Inside the archive', title: 'The life of a negative',
+    summary: 'Why making a photograph is only the beginning of preserving it.',
+    image: './public/images/mission/analog-archive.png',
+    paragraphs: [
+      'Behind a digital photograph in the archive is a physical record. A film negative holds a trace of a particular place and moment, along with the choices made by the person behind the camera.',
+      'Keeping that original means caring for more than an image. Dates, locations and notes help a future viewer understand what they are looking at. Careful handling and storage allow the physical record to remain available alongside its digital copy.',
+      'Our mission starts with making new analog photographs and continues through the patient work of organising, describing and returning to them.'
+    ]
+  },
+  {
+    category: 'Ways of looking', title: 'Return to the same street',
+    summary: 'A simple practice for noticing time: find a viewpoint, make a photograph, come back.',
+    paragraphs: [
+      'Choose a place you know well. Look for a viewpoint that can be found again: a doorway, the edge of a square, a crossing. Make a photograph and note where you stood.',
+      'On the next visit, the scene may seem unchanged. Place the photographs side by side and details begin to emerge: different signs, new surfaces, shifting patterns of movement.',
+      'Repeated photographs do not need a dramatic transformation to matter. They make the passage of time visible and give everyday places a record of their own.'
+    ]
+  }
+];
+function renderCityNews() {
+  const root = $('#news-view');
+  if (root.children.length) return;
+  const cityTitle = window.archiveCity?.title || 'Paměť Prahy';
+  const localImages = places.flatMap(place => place.history.filter(entry => entry.photos?.length && entry.kind !== 'planned').map(entry => entry.photos[0])).filter(photo => !photo.src.endsWith('.svg'));
+  cityNewsArticles.forEach((article, index) => {
+    article.image ||= localImages[index === 2 ? Math.min(2, localImages.length - 1) : 0]?.src || './public/images/mission/analog-archive.png';
+    article.alt = index === 1 ? 'Gloved hands caring for physical photographic records.' : `A photographic record from ${cityTitle}.`;
+  });
+  root.innerHTML = `<header class="news-heading"><div><p class="news-eyebrow">${archiveEscape(cityTitle)} · Journal</p><h1>News &amp; observations</h1></div><p class="news-example-note">A preview with example articles</p></header>
+    <div class="news-grid">${cityNewsArticles.map((article,index) => `<article class="news-card ${index === 0 ? 'news-card-featured' : ''}"><button class="news-story" type="button" data-news-article="${index}" aria-label="Read ${archiveEscape(article.title)}"><div class="news-image"><img src="${archiveEscape(article.image)}" alt="${archiveEscape(article.alt)}" loading="lazy" /></div><div class="news-card-copy"><p class="news-eyebrow">${article.category}</p><h2>${article.title}</h2><p class="news-summary">${article.summary}</p><span class="news-read-more">Read article <span aria-hidden="true">→</span></span></div></button></article>`).join('')}</div>`;
+  prepareImages(root);
+  root.querySelectorAll('[data-news-article]').forEach(button => button.addEventListener('click', () => {
+    const article = cityNewsArticles[Number(button.dataset.newsArticle)];
+    const dialog = $('#news-article-dialog');
+    dialog.querySelector('.news-article-body').innerHTML = `<p class="news-eyebrow">${article.category} · Example article</p><h1 id="news-article-title">${article.title}</h1><p class="news-article-intro">${article.summary}</p><img class="news-article-image" src="${archiveEscape(article.image)}" alt="${archiveEscape(article.alt)}" />${article.paragraphs.map(paragraph=>`<p>${paragraph}</p>`).join('')}`;
+    dialog.showModal(); dialog.scrollTop = 0; prepareImages(dialog);
+  }));
+}
+function setCitySection(section, updateUrl = true) {
+  const news = section === 'news';
+  if (news && state.detailPlaceId) closeDetail({updateUrl:false});
+  $('#archive-view').hidden = news;
+  $('#news-view').hidden = !news;
+  document.querySelectorAll('[data-city-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.cityView === (news ? 'news' : 'archive'))));
+  if (news) renderCityNews();
+  else { state.map?.invalidateSize(); if (!state.detailPlaceId) { renderPlaces(true); updateMarkerStyles(true); } }
+  if (updateUrl) history.replaceState(null, '', news ? '#news' : state.detailPlaceId ? `#place/${state.detailPlaceId}` : '#');
+}
+document.querySelectorAll('[data-city-view]').forEach(button => button.addEventListener('click', () => {
+  if (button.getAttribute('aria-pressed') !== 'true') setCitySection(button.dataset.cityView);
+}));
+$('#news-article-dialog').querySelector('.news-article-close').addEventListener('click',()=>$('#news-article-dialog').close());
+$('#news-article-dialog').addEventListener('click',event=>{ if(event.target !== event.currentTarget)return; const box=event.currentTarget.getBoundingClientRect(); if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)event.currentTarget.close(); });
+window.addEventListener('hashchange',()=>setCitySection(location.hash==='#news'?'news':'archive',false));
+if (location.hash === '#news') setCitySection('news',false);
