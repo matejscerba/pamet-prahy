@@ -183,6 +183,8 @@ function timelineCenterOffset(viewport) {
 function renderMonthTrack(animate = false) {
   const track = $("#month-track");
   const viewport = $("#month-viewport");
+  // Hidden sections have no usable width; size the ruler when Archive is revealed.
+  if (!viewport.clientWidth) return;
   const previousScroll = viewport.scrollLeft;
   track.innerHTML = months.map((month) => {
     const record = recordsForMonth(month), year = month.endsWith("-01");
@@ -792,7 +794,7 @@ async function setCitySection(section, updateUrl = true) {
   $('#news-view').hidden = !news;
   document.querySelectorAll('[data-city-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.cityView === (news ? 'news' : 'archive'))));
   if (news) renderCityNews();
-  else { state.map?.invalidateSize(); if (!state.detailPlaceId) { renderPlaces(true); updateMarkerStyles(true); } }
+  else { renderMonthTrack(false); state.map?.invalidateSize(); if (!state.detailPlaceId) { renderPlaces(true); updateMarkerStyles(true); } }
   if (updateUrl) history.replaceState(null, '', news ? '#news' : state.detailPlaceId ? `#place/${state.detailPlaceId}` : '#archive');
 }
 document.querySelectorAll('[data-city-view]').forEach(button => button.addEventListener('click', () => {
