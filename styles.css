@@ -892,3 +892,23 @@ body:has(.place-detail:not([hidden])) {
   .news-article-dialog { width: calc(100% - 24px); max-height: calc(100% - 24px); padding: 48px 22px 24px; }
 }
 @media (prefers-reduced-motion: reduce) { .news-article-dialog[open] { animation: none; } }
+
+/* A quiet journal: compact titles and generous space around each story. */
+.city-news { padding: 64px clamp(28px,7vw,112px) 88px; }
+.news-grid { max-width: 1040px; gap: 72px 52px; }
+.news-card-featured .news-story { grid-template-columns: 1.25fr 1fr; gap: 56px; }
+.news-card h2, .news-card-featured h2 { font-size: 20px; line-height: 1.4; letter-spacing: 0; max-width: 26em; margin-bottom: 18px; }
+.news-card-copy { padding-top: 24px; }
+.news-card-featured .news-card-copy { padding: 24px 0; }
+.news-eyebrow { font-size: 9px; margin-bottom: 18px; }
+.news-summary { font-size: 12px; line-height: 1.85; color: #aaa; margin-bottom: 28px; }
+.news-read-more { font-size: 10px; }
+.news-article-body h1 { font-size: 24px; line-height: 1.4; letter-spacing: 0; }
+.news-article-body > p:not(.news-eyebrow) { font-size: 14px; line-height: 1.9; }
+@media (max-width: 800px) {
+  .city-news { padding: 34px 24px 64px; }
+  .news-grid { gap: 48px; }
+  .news-card h2, .news-card-featured h2 { font-size: 18px; }
+  .news-card-featured .news-card-copy { padding: 24px 0 0; }
+  .news-article-body h1 { font-size: 21px; }
+}
