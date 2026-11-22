@@ -906,7 +906,7 @@ function applyArticleLanguage() {
   $('#news-view').lang = articleLanguage;
   $('#news-article-dialog').lang = articleLanguage;
   document.querySelector('[data-city-view="news"]').textContent = 'JOURNAL';
-  document.querySelector('[data-city-view="archive"]').textContent = articleUI('archive');
+  document.querySelector('[data-city-view="archive"]').textContent = 'ARCHIVE';
   $('.nav-search-toggle').textContent = articleUI('search');
   $('#place-search').placeholder = articleUI('placeholder');
   document.querySelector('label[for="place-search"]').textContent = articleUI('placeholder');
