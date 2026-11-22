@@ -84,3 +84,51 @@ window.addEventListener('pageshow', event => {
   void document.documentElement.offsetWidth;
   document.documentElement.classList.add('cities-returning');
 });
+
+// The directory collects the same article records used by each city journal.
+const directoryJournalEntries = [];
+for (const [cityId, city] of Object.entries(window.cityArchives)) {
+  const language = city.lang === 'ca' ? 'es' : city.lang;
+  const articles = window.journalArticles.filter(article => cityId === 'prague' ? !article.otherCitiesOnly : !article.pragueOnly);
+  const recordImages = (window.cityBuildings[cityId] || []).flatMap(place => place.history.filter(event => event.kind !== 'planned').flatMap(event => event.photos || []));
+  articles.forEach((article,index) => {
+    const copy = window.articleLocalization[language]?.articles[article.key];
+    const base = cityId === 'prague' ? './praha.html' : `./city.html?city=${encodeURIComponent(cityId)}`;
+    directoryJournalEntries.push({
+      cityId, cityTitle:city.title, language,
+      title:copy?.[1] || article.title,
+      summary:copy?.[2] || article.summary,
+      category:copy?.[0] || article.category,
+      image:article.image || recordImages[0]?.src || './public/images/mission/analog-archive.png',
+      alt:article.alt || city.title,
+      url:`${base}${base.includes('?') ? '&' : '?'}article=${encodeURIComponent(article.key)}#journal`,
+      rank:article.example === false ? -2 + index : index,
+    });
+  });
+}
+directoryJournalEntries.sort((a,b)=>a.rank-b.rank);
+const collectionFilter = document.querySelector('#journal-collection-filter');
+for (const [id,city] of Object.entries(window.cityArchives)) {
+  const option=document.createElement('option'); option.value=id; option.textContent=city.title; collectionFilter.append(option);
+}
+let journalVisibleCount = 9;
+function renderDirectoryJournal() {
+  const entries=directoryJournalEntries.filter(entry=>collectionFilter.value==='all'||entry.cityId===collectionFilter.value);
+  const root=document.querySelector('#collections-journal-grid');
+  root.replaceChildren();
+  for (const entry of entries.slice(0,journalVisibleCount)) {
+    const article=document.createElement('article');
+    const link=document.createElement('a'); link.className='collection-story'; link.href=entry.url;
+    const image=document.createElement('img'); image.src=entry.image; image.alt=entry.alt; image.loading='lazy'; image.decoding='async'; image.width=600; image.height=600;
+    const collection=document.createElement('p'); collection.className='collection-story-city'; collection.textContent=entry.cityTitle;
+    const title=document.createElement('h3'); title.textContent=entry.title; title.lang=entry.language;
+    const summary=document.createElement('p'); summary.className='collection-story-summary'; summary.textContent=entry.summary; summary.lang=entry.language;
+    const more=document.createElement('span'); more.className='collection-story-read'; more.textContent='Read article →';
+    link.append(image,collection,title,summary,more); article.append(link); root.append(article);
+  }
+  document.querySelector('#journal-load-more').hidden = journalVisibleCount>=entries.length;
+  document.querySelector('#journal-entry-count').textContent=`${Math.min(journalVisibleCount,entries.length)} / ${entries.length}`;
+}
+collectionFilter.addEventListener('change',()=>{journalVisibleCount=9;renderDirectoryJournal();});
+document.querySelector('#journal-load-more').addEventListener('click',()=>{journalVisibleCount+=9;renderDirectoryJournal();});
+renderDirectoryJournal();

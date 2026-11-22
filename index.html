@@ -12,7 +12,7 @@
   if (returningFromCity || returningThroughHistory) document.documentElement.classList.add('cities-returning');
 </script>
   <title>Choose your city</title>
-  <link rel="stylesheet" href="./cities.css?v=21" />
+  <link rel="stylesheet" href="./cities.css?v=22" />
   <script>function openSavedPlace(){if(location.hash.startsWith('#place/'))location.replace('./praha.html'+location.search+location.hash)}openSavedPlace();window.addEventListener('hashchange',openSavedPlace);</script>
   <link rel="preload" as="image" href="./public/images/mission/analog-archive.png" fetchpriority="low" />
 </head>
@@ -42,13 +42,22 @@
 <li><a class="city-link" href="./city.html?city=barcelona#journal"><span lang="ca">Memòria de Barcelona</span><span class="available" aria-hidden="true">→</span></a></li>
 <li><a class="city-link" href="./city.html?city=lisbon#journal"><span lang="pt">Memória de Lisboa</span><span class="available" aria-hidden="true">→</span></a></li>
 <li><a class="city-link" href="./city.html?city=athens#journal"><span lang="el">Μνήμη της Αθήνας</span><span class="available" aria-hidden="true">→</span></a></li></ul></section></div>
-  </main>
+  <section class="collections-journal" aria-labelledby="collections-journal-title">
+    <header class="collections-journal-header"><h2 id="collections-journal-title">JOURNAL</h2><select id="journal-collection-filter" aria-label="Filter journal by collection"><option value="all">All collections</option></select></header>
+    <div class="collections-journal-grid" id="collections-journal-grid"></div>
+    <div class="collections-journal-more"><button id="journal-load-more" type="button">Load more</button><span id="journal-entry-count" aria-live="polite"></span></div>
+  </section>
+</main>
   <dialog class="city-info" aria-labelledby="city-info-title">
     <button class="city-info-close" type="button" aria-label="Close">×</button>
     <h2 id="city-info-title"></h2><div class="city-info-body"><p>Informace připravujeme.</p></div>
   </dialog>
+  <script src="./city-data.js?v=1"></script>
+  <script src="./city-buildings.js?v=1"></script>
+  <script src="./article-languages.js?v=1"></script>
+  <script src="./journal-data.js?v=1"></script>
   <script src="./photo-credits.js?v=1"></script>
-  <script src="./cities.js?v=20"></script>
+  <script src="./cities.js?v=21"></script>
 </body>
 
 </html>
