@@ -87,3 +87,12 @@
 .mission-photo { opacity: 0; transition: opacity .45s ease-out; }
 .mission-photo.is-ready { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .mission-photo { transition: none; } }
+
+.directory-identity { display: flex; flex-direction: column; align-items: center; }
+.directory-year { margin: 18px 0 6px; color: #737373; font: 12px/1.5 Komera,Arial,sans-serif; }
+.directory-mission { padding: 6px 10px; border: 0; background: transparent; color: #737373; font: 11px/1.5 Arial,Helvetica,sans-serif; cursor: pointer; }
+.directory-mission:hover { color: #333; text-decoration: underline; text-underline-offset: 4px; }
+.directory-mission:focus-visible { outline: 1px solid #626262; outline-offset: 4px; }
+.cities-returning .directory-year, .cities-returning .directory-mission { animation: cities-appear .6s ease-out both; animation-delay: .15s; }
+.cities-returning .directory-mission { animation-delay: .25s; }
+@media (prefers-reduced-motion: reduce) { .cities-returning .directory-year, .cities-returning .directory-mission { animation: none; } }
