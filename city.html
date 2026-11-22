@@ -30,7 +30,7 @@
     <link rel="preconnect" href="https://gs-pub.praha.eu" />
     <link rel="preconnect" href="https://tile.openstreetmap.org" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=59" />
+    <link rel="stylesheet" href="./styles.css?v=61" />
   <link rel="preload" as="image" href="./public/images/mission/analog-archive.png" fetchpriority="low" />
 </head>
 <body>
@@ -45,7 +45,7 @@
       <a class="archive-home" href="./" aria-label="World Analog Archive — výběr města"><img src="./city-logo.svg" width="44" height="44" alt="World Analog Archive" /></a>
       <a class="topbar-brand" href="#" aria-label="Paměť Prahy — zpět na mapu"><span class="brand-name">Paměť Prahy</span></a>
       </div>
-      <div class="topbar-search" id="header-search"><label class="visually-hidden" for="place-search">Search for a place</label><input id="place-search" type="search" placeholder="Search for a building or place" autocomplete="off" /></div>
+      <div class="topbar-search" id="header-search"><label class="visually-hidden" for="place-search">Search places and articles</label><input id="place-search" type="search" placeholder="Search places and articles" autocomplete="off" aria-controls="site-search-results" /><div id="site-search-results" class="site-search-results" hidden aria-live="polite"></div></div>
 
       <nav class="city-view-switch" aria-label="City sections"><button type="button" data-city-view="news" aria-pressed="false">News</button><button type="button" data-city-view="archive" aria-pressed="true">Archive</button></nav>
       <nav class="topbar-nav" id="header-menu" aria-label="Hlavní navigace">
@@ -75,6 +75,6 @@
     <div class="photo-lightbox" id="photo-lightbox" hidden role="dialog" aria-modal="true" aria-label="Fotografie přes celou obrazovku"><button class="photo-lightbox-close" id="photo-lightbox-close" type="button" aria-label="Zavřít fotografii"></button><button class="photo-lightbox-nav photo-lightbox-prev" id="photo-lightbox-prev" type="button" aria-label="Předchozí fotografie"></button><img id="photo-lightbox-image" alt="" /><button class="photo-lightbox-nav photo-lightbox-next" id="photo-lightbox-next" type="button" aria-label="Následující fotografie"></button></div>
     <div class="info-backdrop" id="info-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="info-title"><section class="info-panel"><button id="info-close" class="info-close" type="button" aria-label="Zavřít">×</button><h2 id="info-title"></h2><p>Informace připravujeme.</p></section></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./app.js?v=46"></script>
+    <script src="./app.js?v=48"></script>
   </body>
 </html>
