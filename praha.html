@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#ffffff" />
 <script>
-  if (new URLSearchParams(location.search).has('enter')) {
+  if (new URLSearchParams(location.search).has('enter') && location.hash !== '#news') {
     document.documentElement.classList.add('city-entering');
     const entryStarted = performance.now();
     document.addEventListener('DOMContentLoaded', () => {
@@ -27,7 +27,7 @@
     <link rel="preconnect" href="https://gs-pub.praha.eu" />
     <link rel="preconnect" href="https://tile.openstreetmap.org" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="./styles.css?v=58" />
+    <link rel="stylesheet" href="./styles.css?v=59" />
   <link rel="preload" as="image" href="./public/images/mission/analog-archive.png" fetchpriority="low" />
 </head>
 <body>
@@ -72,6 +72,6 @@
     <div class="photo-lightbox" id="photo-lightbox" hidden role="dialog" aria-modal="true" aria-label="Fotografie přes celou obrazovku"><button class="photo-lightbox-close" id="photo-lightbox-close" type="button" aria-label="Zavřít fotografii"></button><button class="photo-lightbox-nav photo-lightbox-prev" id="photo-lightbox-prev" type="button" aria-label="Předchozí fotografie"></button><img id="photo-lightbox-image" alt="" /><button class="photo-lightbox-nav photo-lightbox-next" id="photo-lightbox-next" type="button" aria-label="Následující fotografie"></button></div>
     <div class="info-backdrop" id="info-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="info-title"><section class="info-panel"><button id="info-close" class="info-close" type="button" aria-label="Zavřít">×</button><h2 id="info-title"></h2><p>Informace připravujeme.</p></section></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="./app.js?v=44"></script>
+    <script src="./app.js?v=45"></script>
   </body>
 </html>
