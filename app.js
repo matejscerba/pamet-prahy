@@ -768,7 +768,7 @@ async function setCitySection(section, updateUrl = true) {
     $('.topbar').inert = true;
     $('#news-view').inert = true;
     await Promise.all([
-      new Promise(resolve => window.setTimeout(resolve, 2000)),
+      new Promise(resolve => window.setTimeout(resolve, 1000)),
       Promise.all(places.map(place => (eventsForMonth(place,state.month) || latestEventForMonth(place,state.month) || place.history[0])?.photos[0]?.src).filter(Boolean).map(preloadPhoto)),
     ]);
     if (request !== citySectionRequest) return;

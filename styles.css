@@ -1009,3 +1009,5 @@ body:has(.place-detail:not([hidden])) {
 .news-article-close:focus-visible { outline: 1px solid #777; outline-offset: 2px; }
 .news-article-close:focus:not(:focus-visible) { outline: none; }
 @media (prefers-reduced-motion: reduce) { .news-article-dialog[open], .news-article-dialog[open] .news-article-body { animation: none; } }
+
+.archive-entering .city-loading-progress::after { animation-duration: 1s; }
