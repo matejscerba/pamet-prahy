@@ -23,15 +23,14 @@ function renderMission(body) {
   const figure=document.createElement('figure');figure.className='mission-vision';
   const photo=document.createElement('img');photo.className='mission-photo';photo.src='./public/images/mission/mission-2100-abstract.png';
   photo.alt='An abstract oil-style painting with shadow-like human forms and suggestions of immersive headsets.';photo.width=1672;photo.height=941;
-  const caption=document.createElement('figcaption');caption.textContent='AI-generated painting';
-  figure.append(photo,caption);
+  figure.append(photo);
   const copy=document.createElement('div');copy.className='mission-copy';
   const heading=document.createElement('h1');heading.textContent='Memorandum for 2100';copy.append(heading);
-  for(const text of [
-    'By 2100, it may be difficult to know what is real. Generated images and personalised realities may reshape how we see the world. We believe a physical memory must remain: photographs of places that existed, made through an encounter between light, film and the world.',
-    'World Analog Archive is a commitment to create and preserve that memory. We photograph real places on film, keep the originals, and return to record how they change. Each negative stays connected to its date, location and the circumstances in which it was made.',
-    'Our responsibility is to care for these records and keep them accessible. Digital copies allow them to be shared; the physical originals remain available to be examined, questioned and understood in context.',
-    'What we record today becomes the memory available tomorrow. We are building an analog archive for 2100 and beyond.'
+for(const text of [
+  'In 2100, we may share the same street and live in entirely different worlds. Through smart glasses, immersive headsets and personalised realities, each of us may see a different version of the same place. What one person experiences as real may never have existed for another.',
+  'Beneath these layers, there is still a physical world. Buildings stand and disappear. Streets change. Light falls on places that will never look exactly the same again. We must record that world while it is here, before its memory becomes indistinguishable from the worlds we invent.',
+  'World Analog Archive exists to preserve this shared reality on analog media. A photograph made on film leaves a physical original: light from a real place recorded on material we can keep. Together with its date, location and provenance, that original gives future generations a record they can return to and examine.',
+  'Our commitment is to create these records now and preserve them for 2100 and beyond. When every person can inhabit a different world, the real one must still have a memory. A shared reference, held in physical originals, so that what was there does not have to be a matter of belief.'
   ]) { const paragraph=document.createElement('p');paragraph.textContent=text;copy.append(paragraph); }
   page.append(figure,copy);body.append(page);
   photo.decode().catch(()=>{}).then(()=>{if(photo.isConnected)photo.classList.add('is-ready');});
