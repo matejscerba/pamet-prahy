@@ -690,7 +690,7 @@ $("#photo-lightbox-prev").addEventListener("click", () => moveLightboxPhoto(-1))
 $("#photo-lightbox-next").addEventListener("click", () => moveLightboxPhoto(1));
 $("#photo-lightbox").addEventListener("click", (event) => { if (event.target === $("#photo-lightbox")) closePhoto(); });
 document.addEventListener("keydown", (event) => {
-  if (event.key === 'Escape' && $('#news-article-dialog').open) { $('#news-article-dialog').close(); return; }
+  if (event.key === 'Escape' && $('#news-article-dialog').open) { closeNewsArticle(); return; }
   if (!$("#photo-lightbox").hidden && (event.key === "ArrowLeft" || event.key === "ArrowRight")) { event.preventDefault(); moveLightboxPhoto(event.key === "ArrowLeft" ? -1 : 1); return; }
   if (event.key === "Escape" && !$("#photo-lightbox").hidden) closePhoto();
   else if (event.key === "Escape" && state.detailPlaceId) closeDetail();
@@ -794,7 +794,7 @@ document.querySelectorAll('[data-city-view]').forEach(button => button.addEventL
   if ($('#news-article-dialog').open) $('#news-article-dialog').close();
   if (button.getAttribute('aria-pressed') !== 'true') setCitySection(button.dataset.cityView);
 }));
-$('#news-article-dialog').querySelector('.news-article-close').addEventListener('click',()=>$('#news-article-dialog').close());
+$('#news-article-dialog').querySelector('.news-article-close').addEventListener('click',closeNewsArticle);
 $('#news-article-dialog').addEventListener('click',event=>{ if(event.target !== event.currentTarget)return; const box=event.currentTarget.getBoundingClientRect(); if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)event.currentTarget.close(); });
 window.addEventListener('hashchange',()=>setCitySection(isJournalHash()?'news':'archive',false));
 if (isJournalHash()) setCitySection('news',false);
@@ -841,6 +841,7 @@ $('#news-article-dialog').addEventListener('close',()=>{
   if ($('#news-article-dialog').open) return;
   const articleUrl = new URL(location.href);
   articleUrl.searchParams.delete('article');
+  articleUrl.searchParams.delete('from');
   history.replaceState(null, '', articleUrl.pathname + articleUrl.search + articleUrl.hash);
   const index = activeNewsArticleIndex;
   activeNewsArticleIndex = null;
@@ -888,5 +889,30 @@ document.addEventListener('DOMContentLoaded',applyArticleLanguage,{once:true});
 const requestedJournalArticle = new URLSearchParams(location.search).get('article');
 if (requestedJournalArticle && isJournalHash()) {
   const articleIndex = cityNewsArticles.findIndex(article => article.key === requestedJournalArticle);
-  if (articleIndex !== -1) openNewsArticle(articleIndex);
+if (articleIndex !== -1) {
+  try {
+    const referrer = new URL(document.referrer);
+    if (referrer.origin === location.origin && ['/', '/index.html'].includes(referrer.pathname)) {
+      const articleUrl = new URL(location.href);
+      articleUrl.searchParams.set('from','directory');
+      history.replaceState(null,'',articleUrl.pathname+articleUrl.search+articleUrl.hash);
+    }
+  } catch {}
+  openNewsArticle(articleIndex);
+}
+}
+
+function closeNewsArticle() {
+  if (new URLSearchParams(location.search).get('from') === 'directory') {
+    try {
+      const referrer = new URL(document.referrer);
+      if (referrer.origin === location.origin && ['/', '/index.html'].includes(referrer.pathname) && history.length > 1) {
+        history.back();
+        return;
+      }
+    } catch {}
+    location.assign('./#collections-journal-title');
+    return;
+  }
+  $('#news-article-dialog').close();
 }
