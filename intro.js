@@ -33,7 +33,6 @@
     pageParts.forEach(element=>{if(element)element.inert=false;});
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content','#ffffff');
     clearTimeout(window.waaIntroFailsafe);
-    try { sessionStorage.setItem('waa-intro-v1-seen','1'); } catch {}
     const url = new URL(location.href);
     if (url.searchParams.has('intro')) {
       url.searchParams.delete('intro');

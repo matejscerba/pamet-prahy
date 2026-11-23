@@ -7,17 +7,16 @@
   <meta name="description" content="Explore the memory of European cities through photography and time. Start with the Prague archive." />
 <script>
   const previousPage = document.referrer ? new URL(document.referrer) : null;
-  const returningFromCity = previousPage?.origin === location.origin && /\/(?:praha|city)(?:\.html)?$/.test(previousPage.pathname);
-  const returningThroughHistory = performance.getEntriesByType('navigation')[0]?.type === 'back_forward';
+  const navigationType = performance.getEntriesByType('navigation')[0]?.type;
+  const returningFromCity = navigationType !== 'reload' && previousPage?.origin === location.origin && /\/(?:praha|city)(?:\.html)?$/.test(previousPage.pathname);
+  const returningThroughHistory = navigationType === 'back_forward';
   if (returningFromCity || returningThroughHistory) document.documentElement.classList.add('cities-returning');
 </script>
 <script>
 (() => {
   const force = new URLSearchParams(location.search).get('intro');
-  let seen = false;
-  try { seen = sessionStorage.getItem('waa-intro-v1-seen') === '1'; } catch {}
   const returning = document.documentElement.classList.contains('cities-returning');
-  window.waaShouldIntro = force === '1' || (force !== '0' && !seen && !returning && !location.hash);
+  window.waaShouldIntro = force === '1' || (force !== '0' && !returning && !location.hash);
   if (window.waaShouldIntro) {
     document.documentElement.classList.add('waa-intro-pending');
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content','#000000');
@@ -32,7 +31,7 @@
 </script>
   <link rel="stylesheet" href="./intro.css?v=2" />
   <link rel="preload" as="image" href="./public/images/intro/earth-blue-marble.jpg" fetchpriority="high" />
-  <script src="./intro.js?v=2" defer></script>
+  <script src="./intro.js?v=3" defer></script>
   <title>Choose your city</title>
   <link rel="stylesheet" href="./cities.css?v=29" />
   <script>function openSavedPlace(){if(location.hash.startsWith('#place/'))location.replace('./praha.html'+location.search+location.hash)}openSavedPlace();window.addEventListener('hashchange',openSavedPlace);</script>
