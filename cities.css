@@ -96,3 +96,95 @@
 .cities-returning .directory-year, .cities-returning .directory-mission { animation: cities-appear .6s ease-out both; animation-delay: .15s; }
 .cities-returning .directory-mission { animation-delay: .25s; }
 @media (prefers-reduced-motion: reduce) { .cities-returning .directory-year, .cities-returning .directory-mission { animation: none; } }
+
+/* One Journal across all collections, beneath the city directory. */
+main { padding-bottom: 160px; }
+.collections-journal { margin-top: 120px; padding-top: 32px; border-top: 1px solid #e4e4e4; }
+.collections-journal-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 36px; }
+.collections-journal-header h2 { margin: 0; font: 18px/1.5 Komera,Arial,sans-serif; font-weight: 400; }
+#journal-collection-filter { max-width: 240px; min-height: 44px; padding: 8px 28px 8px 0; border: 0; border-bottom: 1px solid #ddd; border-radius: 0; background: transparent; color: #737373; font: 11px/1.5 Arial,Helvetica,sans-serif; }
+.collections-journal-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 56px 36px; }
+.collection-story { display: block; color: #555; text-decoration: none; }
+.collection-story > img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; object-position: center 35%; background: #e9e9e7; }
+.collection-story-city { margin: 20px 0 12px; font: 10px/1.5 Arial,Helvetica,sans-serif; color: #999; }
+.collection-story h3 { margin: 0 0 12px; font: 16px/1.5 Komera,Arial,sans-serif; font-weight: 400; }
+.collection-story-summary { margin: 0 0 18px; color: #888; font: 12px/1.8 Arial,Helvetica,sans-serif; }
+.collection-story-read { font: 10px/1.6 Arial,Helvetica,sans-serif; color: #777; }
+.collection-story:hover .collection-story-read { text-decoration: underline; text-underline-offset: 4px; }
+.collections-journal-more { display: flex; justify-content: center; align-items: center; gap: 24px; margin-top: 54px; color: #999; font: 10px/1.5 Arial,Helvetica,sans-serif; }
+#journal-load-more { border: 0; border-bottom: 1px solid #ccc; padding: 12px 4px; background: transparent; color: #626262; font: 12px/1.5 Arial,Helvetica,sans-serif; cursor: pointer; }
+#journal-load-more[hidden] { display: none; }
+/* Fixed, full-width navigation on both desktop and mobile. */
+.city-nav { position: fixed; inset: auto 0 0; width: 100%; max-width: none; box-sizing: border-box; margin: 0; transform: none; display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 28px; padding: 12px 24px calc(12px + env(safe-area-inset-bottom,0px)); border-top: 1px solid #e6e6e6; background: #fff; z-index: 30; }
+@media (max-width:1000px) {
+  .collections-journal-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .city-nav { inset: auto 0 0; width: 100%; max-width: none; margin: 0; padding: 10px 20px calc(10px + env(safe-area-inset-bottom,0px)); }
+}
+@media (max-width:520px) {
+  .collections-journal { margin-top: 80px; }
+  .collections-journal-header { align-items: start; gap: 18px; }
+  .collections-journal-header h2 { font-size: 16px; padding-top: 10px; }
+  #journal-collection-filter { max-width: 180px; }
+  .collections-journal-grid { grid-template-columns: minmax(0,1fr); gap: 44px; }
+  .city-nav { inset: auto 0 0; max-width: none; width: 100%; gap: 4px 18px; padding: 8px 14px calc(8px + env(safe-area-inset-bottom,0px)); font-size: 11px; }
+}
+
+/* A quiet city finder replaces the regional city lists. */
+.directory-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.directory-city-search { position: relative; width: min(100%,600px); margin: 0 auto; }
+.directory-city-input-row { display: flex; align-items: center; gap: 16px; min-height: 56px; border-bottom: 1px solid #cfcfcf; }
+.directory-city-input-row > svg { flex: 0 0 18px; width: 18px; height: 18px; fill: none; stroke: #999; stroke-width: 1.3; }
+#directory-city-input { flex: 1; width: 100%; min-width: 0; border: 0; border-radius: 0; outline: 0; padding: 14px 0; color: #555; background: transparent; font: 16px/1.5 Komera,Arial,sans-serif; letter-spacing: .025em; }
+#directory-city-input::placeholder { color: #999; opacity: 1; }
+.directory-city-input-row:focus-within { border-color: #737373; }
+.directory-city-input-row > button { flex: 0 0 44px; width: 44px; min-height: 44px; border: 0; background: transparent; color: #777; font: 24px/1 Arial,sans-serif; cursor: pointer; }
+.directory-city-input-row > button:disabled { color: #ccc; cursor: default; }
+.directory-city-results { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 20; max-height: 340px; overflow-y: auto; list-style: none; margin: 0; padding: 4px 0; border: 1px solid #e6e6e6; background: #fff; }
+.directory-city-results[hidden] { display: none; }
+.directory-city-results a { display: flex; justify-content: space-between; align-items: center; gap: 18px; min-height: 56px; padding: 12px 18px; text-decoration: none; color: #626262; }
+.directory-city-results a:hover, .directory-city-results a:focus-visible { background: #f6f6f4; }
+.directory-city-result-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.directory-city-result-name { font: 13px/1.5 Arial,Helvetica,sans-serif; }
+.directory-city-result-collection { color: #999; font: 10px/1.5 Arial,Helvetica,sans-serif; }
+.directory-city-result-arrow { font: 20px/1 Arial,sans-serif; }
+.directory-city-no-match { padding: 16px 18px; color: #999; font: 12px/1.5 Arial,Helvetica,sans-serif; }
+.cities-returning .directory-city-search { animation: cities-appear .65s cubic-bezier(.2,.65,.3,1) both; animation-delay: .55s; }
+@media (max-width:520px) { #directory-city-input { font-size: 14px; } .directory-city-input-row { gap: 12px; } }
+@media (prefers-reduced-motion: reduce) { .cities-returning .directory-city-search { animation: none; } }
+
+/* A quiet, image-first memorandum. */
+body.mission-reading { overflow: hidden; background: #080a09; }
+body.mission-reading main, body.mission-reading .directory-identity { visibility: hidden; }
+.city-info-close { display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border-radius: 50%; }
+.city-info-close svg { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; pointer-events: none; }
+.city-info[data-section="Mission"] { position: fixed; inset: 0 0 var(--mission-footer-height,56px); width: 100vw; height: calc(100dvh - var(--mission-footer-height,56px)); max-width: none; max-height: none; margin: 0; padding: 72px clamp(24px,7vw,104px) 100px; border: 0; background: #080a09; color: #c8ccc5; color-scheme: dark; z-index: 25; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #3b403d #080a09; }
+.city-info[data-section="Mission"] > h2 { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.city-info[data-section="Mission"] .city-info-close { position: fixed; top: 16px; right: 20px; z-index: 2; background: transparent; color: #bbc0b6; }
+.city-info[data-section="Mission"] .city-info-close:hover { color: #fff; }
+.city-info[data-section="Mission"] .city-info-close:focus-visible { outline: 1px solid #777; outline-offset: 2px; }
+.mission-page { max-width: 1000px; margin: 0 auto; font-family: Komera,Arial,sans-serif; }
+.mission-vision { margin: 0; }
+.mission-vision .mission-photo { display: block; width: 100%; height: auto; aspect-ratio: auto; object-fit: contain; background: #080a09; }
+.mission-vision figcaption { margin-top: 12px; color: #73786f; font: 8px/1.7 Komera,Arial,sans-serif; }
+.mission-copy { max-width: 680px; margin: 64px auto 0; }
+.mission-copy h1 { margin: 0 0 32px; color: #e3e6df; font: 400 20px/1.6 Komera,Arial,sans-serif; }
+.city-info[data-section="Mission"] .mission-copy p { margin: 0 0 26px; color: #b9bfb3; font: 13px/2 Komera,Arial,sans-serif; }
+body.mission-reading .city-nav { background: #080a09; border-top-color: #20261f; color: #929b8d; font: 10px/1.5 Komera,Arial,sans-serif; }
+body.mission-reading .city-nav button { color: #929b8d; }
+body.mission-reading .city-nav button:hover, body.mission-reading .city-nav button[data-info="Mission"] { color: #dce2d6; }
+@keyframes mission-page-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mission-copy-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.city-info[data-section="Mission"][open] { animation: mission-page-in .3s ease-out backwards; }
+.city-info[data-section="Mission"][open] .mission-page { animation: mission-copy-in .5s cubic-bezier(.16,1,.3,1) backwards; }
+@media (max-width:720px) {
+  .city-info[data-section="Mission"] { padding: 72px 24px 64px; }
+  .city-info[data-section="Mission"] .city-info-close { top: 10px; right: 10px; }
+  .mission-copy { margin-top: 40px; }
+  .mission-copy h1 { font-size: 18px; margin-bottom: 26px; }
+  .city-info[data-section="Mission"] .mission-copy p { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .city-info[data-section="Mission"][open], .city-info[data-section="Mission"][open] .mission-page { animation: none; } }
+
+#directory-city-input { font-size: 12px; }
+.collections-journal-header h2 { font-size: 13px; }
+@media(max-width:520px) { #directory-city-input { font-size: 11px; } .collections-journal-header h2 { font-size: 12px; } }

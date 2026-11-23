@@ -11,44 +11,73 @@
   const returningThroughHistory = performance.getEntriesByType('navigation')[0]?.type === 'back_forward';
   if (returningFromCity || returningThroughHistory) document.documentElement.classList.add('cities-returning');
 </script>
+<script>
+(() => {
+  const force = new URLSearchParams(location.search).get('intro');
+  let seen = false;
+  try { seen = sessionStorage.getItem('waa-intro-v1-seen') === '1'; } catch {}
+  const returning = document.documentElement.classList.contains('cities-returning');
+  window.waaShouldIntro = force === '1' || (force !== '0' && !seen && !returning && !location.hash);
+  if (window.waaShouldIntro) {
+    document.documentElement.classList.add('waa-intro-pending');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content','#000000');
+    window.waaIntroFailsafe = setTimeout(() => {
+      document.documentElement.classList.remove('waa-intro-pending','waa-intro-revealing');
+      const intro = document.querySelector('#waa-intro'); if (intro) intro.hidden = true;
+      document.querySelectorAll('.city-header,body > main').forEach(element => { element.inert = false; });
+      document.body.style.overflow = '';
+    },10000);
+  }
+})();
+</script>
+  <link rel="stylesheet" href="./intro.css?v=2" />
+  <link rel="preload" as="image" href="./public/images/intro/earth-blue-marble.jpg" fetchpriority="high" />
+  <script src="./intro.js?v=2" defer></script>
   <title>Choose your city</title>
-  <link rel="stylesheet" href="./cities.css?v=21" />
+  <link rel="stylesheet" href="./cities.css?v=29" />
   <script>function openSavedPlace(){if(location.hash.startsWith('#place/'))location.replace('./praha.html'+location.search+location.hash)}openSavedPlace();window.addEventListener('hashchange',openSavedPlace);</script>
   <link rel="preload" as="image" href="./public/images/mission/analog-archive.png" fetchpriority="low" />
 </head>
 <body>
-  <header class="city-header"><div class="directory-identity"><a class="wordmark" href="./" aria-label="Home"><img class="city-logo" src="./city-logo.svg" width="112" height="112" alt="World Analog Archive" /></a><p class="directory-year">2026 - 2100</p><button class="directory-mission" type="button" data-info="Mission">Discover our mission</button></div><nav class="city-nav" aria-label="Main navigation"><button type="button" data-info="Mission">Mission</button><button type="button" data-info="Laboratory">Laboratory</button><button type="button" data-info="Contact">Contact</button><button type="button" data-info="Image policy">Image policy</button><button type="button" data-info="Q&amp;A">Q&amp;A</button></nav></header>
+<div class="waa-intro" id="waa-intro" hidden role="dialog" aria-modal="true" aria-labelledby="waa-intro-title">
+  <div class="waa-intro-veil" aria-hidden="true"></div>
+  <button class="waa-intro-symbol" type="button" aria-label="Enter World Analog Archive">
+    <img class="waa-intro-earth" src="./public/images/intro/earth-blue-marble.jpg" width="1881" height="1881" alt="Earth photographed by the Apollo 17 crew" fetchpriority="high" />
+    <img class="waa-intro-mark" src="./city-logo.svg" width="152" height="152" alt="" aria-hidden="true" />
+  </button>
+  <div class="waa-intro-caption"><p>2026–2100</p><h1 id="waa-intro-title">WORLD ANALOG ARCHIVE</h1></div>
+  <button class="waa-intro-skip" type="button">Skip intro <span aria-hidden="true">→</span></button>
+</div>
+
+  <header class="city-header"><div class="directory-identity"><a class="wordmark" href="./" aria-label="Home"><img class="city-logo" src="./city-logo.svg" width="112" height="112" alt="World Analog Archive" /></a><p class="directory-year">2026 - 2100</p><button class="directory-mission" type="button" data-info="Mission">Read out Memorandum for 2100</button></div><nav class="city-nav" aria-label="Main navigation"><button type="button" data-info="Mission">Memorandum</button><button type="button" data-info="Laboratory">Laboratory</button><button type="button" data-info="Contact">Contact</button><button type="button" data-info="Image policy">Image policy</button><button type="button" data-info="Q&amp;A">Q&amp;A</button></nav></header>
 
   <main>
-    <div id="cities" class="city-grid" aria-label="European city archives"><section class="region"><h2>Central Europe</h2><ul><li><a class="city-link" aria-label="Paměť Prahy — otevřít archiv" href="./praha.html#journal"><span lang="cs">Paměť Prahy</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=berlin#journal"><span lang="de">Gedächtnis Berlins</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=vienna#journal"><span lang="de">Gedächtnis Wiens</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=budapest#journal"><span lang="hu">Budapest emlékezete</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=warsaw#journal"><span lang="pl">Pamięć Warszawy</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=zurich#journal"><span lang="de">Gedächtnis Zürichs</span><span class="available" aria-hidden="true">→</span></a></li></ul></section>
-<section class="region"><h2>Western Europe</h2><ul><li><a class="city-link" href="./city.html?city=london#journal"><span lang="en">Memory of London</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=paris#journal"><span lang="fr">Mémoire de Paris</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=amsterdam#journal"><span lang="nl">Geheugen van Amsterdam</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=brussels#journal"><span lang="fr">Mémoire de Bruxelles</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=dublin#journal"><span lang="ga">Cuimhne Bhaile Átha Cliath</span><span class="available" aria-hidden="true">→</span></a></li></ul></section>
-<section class="region"><h2>Northern Europe</h2><ul><li><a class="city-link" href="./city.html?city=copenhagen#journal"><span lang="da">Københavns hukommelse</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=stockholm#journal"><span lang="sv">Stockholms minne</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=oslo#journal"><span lang="nb">Oslos minne</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=helsinki#journal"><span lang="fi">Helsingin muisti</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=reykjavik#journal"><span lang="is">Minni Reykjavíkur</span><span class="available" aria-hidden="true">→</span></a></li></ul></section>
-<section class="region"><h2>Southern Europe</h2><ul><li><a class="city-link" href="./city.html?city=rome#journal"><span lang="it">Memoria di Roma</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=milan#journal"><span lang="it">Memoria di Milano</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=madrid#journal"><span lang="es">Memoria de Madrid</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=barcelona#journal"><span lang="ca">Memòria de Barcelona</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=lisbon#journal"><span lang="pt">Memória de Lisboa</span><span class="available" aria-hidden="true">→</span></a></li>
-<li><a class="city-link" href="./city.html?city=athens#journal"><span lang="el">Μνήμη της Αθήνας</span><span class="available" aria-hidden="true">→</span></a></li></ul></section></div>
-  </main>
+<form class="directory-city-search" id="directory-city-search" role="search" autocomplete="off">
+  <label class="directory-sr-only" for="directory-city-input">Search for a city</label>
+  <div class="directory-city-input-row">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>
+    <input id="directory-city-input" type="search" placeholder="Search for a city" aria-controls="directory-city-results" autocapitalize="off" spellcheck="false" />
+    <button type="submit" aria-label="Open matching city" disabled>→</button>
+  </div>
+  <ul id="directory-city-results" class="directory-city-results" hidden></ul>
+  <p id="directory-city-status" class="directory-sr-only" aria-live="polite" role="status"></p>
+</form>
+  <section class="collections-journal" aria-labelledby="collections-journal-title">
+    <header class="collections-journal-header"><h2 id="collections-journal-title">JOURNAL</h2><select id="journal-collection-filter" aria-label="Filter journal by collection"><option value="all">All collections</option></select></header>
+    <div class="collections-journal-grid" id="collections-journal-grid"></div>
+    <div class="collections-journal-more"><button id="journal-load-more" type="button">Load more</button><span id="journal-entry-count" aria-live="polite"></span></div>
+  </section>
+</main>
   <dialog class="city-info" aria-labelledby="city-info-title">
-    <button class="city-info-close" type="button" aria-label="Close">×</button>
+    <button class="city-info-close" type="button" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
     <h2 id="city-info-title"></h2><div class="city-info-body"><p>Informace připravujeme.</p></div>
   </dialog>
+  <script src="./city-data.js?v=1"></script>
+  <script src="./city-buildings.js?v=1"></script>
+  <script src="./article-languages.js?v=1"></script>
+  <script src="./journal-data.js?v=1"></script>
   <script src="./photo-credits.js?v=1"></script>
-  <script src="./cities.js?v=20"></script>
+  <script src="./cities.js?v=31"></script>
 </body>
 
 </html>
